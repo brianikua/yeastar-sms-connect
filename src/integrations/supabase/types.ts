@@ -14,7 +14,114 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      activity_logs: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          message: string
+          metadata: Json | null
+          severity: Database["public"]["Enums"]["log_severity"]
+          sim_port: number | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          message: string
+          metadata?: Json | null
+          severity?: Database["public"]["Enums"]["log_severity"]
+          sim_port?: number | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          message?: string
+          metadata?: Json | null
+          severity?: Database["public"]["Enums"]["log_severity"]
+          sim_port?: number | null
+        }
+        Relationships: []
+      }
+      sim_port_config: {
+        Row: {
+          carrier: string | null
+          created_at: string
+          enabled: boolean
+          extension: string | null
+          id: string
+          label: string | null
+          last_seen_at: string | null
+          phone_number: string | null
+          port_number: number
+          signal_strength: number | null
+          updated_at: string
+        }
+        Insert: {
+          carrier?: string | null
+          created_at?: string
+          enabled?: boolean
+          extension?: string | null
+          id?: string
+          label?: string | null
+          last_seen_at?: string | null
+          phone_number?: string | null
+          port_number: number
+          signal_strength?: number | null
+          updated_at?: string
+        }
+        Update: {
+          carrier?: string | null
+          created_at?: string
+          enabled?: boolean
+          extension?: string | null
+          id?: string
+          label?: string | null
+          last_seen_at?: string | null
+          phone_number?: string | null
+          port_number?: number
+          signal_strength?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sms_messages: {
+        Row: {
+          created_at: string
+          external_id: string | null
+          id: string
+          message_content: string
+          received_at: string
+          sender_number: string
+          sim_port: number
+          status: Database["public"]["Enums"]["sms_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          message_content: string
+          received_at?: string
+          sender_number: string
+          sim_port: number
+          status?: Database["public"]["Enums"]["sms_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          message_content?: string
+          received_at?: string
+          sender_number?: string
+          sim_port?: number
+          status?: Database["public"]["Enums"]["sms_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +130,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      log_severity: "info" | "warning" | "error" | "success"
+      sms_status: "unread" | "read" | "processed" | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +258,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      log_severity: ["info", "warning", "error", "success"],
+      sms_status: ["unread", "read", "processed", "failed"],
+    },
   },
 } as const
