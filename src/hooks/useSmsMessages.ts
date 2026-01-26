@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { useEffect } from "react";
 
 export interface SmsMessage {
   id: string;
@@ -12,6 +13,31 @@ export interface SmsMessage {
 }
 
 export const useSmsMessages = (limit = 50) => {
+  const queryClient = useQueryClient();
+
+  // Subscribe to realtime changes
+  useEffect(() => {
+    const channel = supabase
+      .channel("sms-messages-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "sms_messages",
+        },
+        () => {
+          // Invalidate and refetch on any change
+          queryClient.invalidateQueries({ queryKey: ["sms-messages"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ["sms-messages", limit],
     queryFn: async (): Promise<SmsMessage[]> => {
@@ -32,6 +58,6 @@ export const useSmsMessages = (limit = 50) => {
         isNew: msg.status === "unread",
       }));
     },
-    refetchInterval: 10000, // Refetch every 10 seconds
+    refetchInterval: 30000, // Fallback polling every 30 seconds
   });
 };

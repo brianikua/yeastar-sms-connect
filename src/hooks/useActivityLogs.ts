@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { useEffect } from "react";
 
 export interface LogEntry {
   id: string;
@@ -10,6 +11,31 @@ export interface LogEntry {
 }
 
 export const useActivityLogs = (limit = 50) => {
+  const queryClient = useQueryClient();
+
+  // Subscribe to realtime changes
+  useEffect(() => {
+    const channel = supabase
+      .channel("activity-logs-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "activity_logs",
+        },
+        () => {
+          // Invalidate and refetch on any change
+          queryClient.invalidateQueries({ queryKey: ["activity-logs"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ["activity-logs", limit],
     queryFn: async (): Promise<LogEntry[]> => {
@@ -28,6 +54,6 @@ export const useActivityLogs = (limit = 50) => {
         message: log.message,
       }));
     },
-    refetchInterval: 10000, // Refetch every 10 seconds
+    refetchInterval: 30000, // Fallback polling every 30 seconds
   });
 };
