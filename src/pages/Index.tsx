@@ -19,7 +19,9 @@ const Index = () => {
   const queryClient = useQueryClient();
   const [lastSync, setLastSync] = useState(() => new Date().toLocaleString("sv-SE").replace(",", ""));
 
-  const { data: simPorts = [], isLoading: simLoading } = useSimPorts();
+  const { data: simData, isLoading: simLoading } = useSimPorts();
+  const simPorts = simData?.ports || [];
+  const simConfigs = simData?.configs || [];
   const { data: messages = [], isLoading: messagesLoading } = useSmsMessages();
   const { data: logs = [], isLoading: logsLoading } = useActivityLogs();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
@@ -137,10 +139,11 @@ const Index = () => {
 
           <TabsContent value="config" className="space-y-6">
             <ConfigurationPanel
-              gatewayIp="192.168.1.100"
-              pollingInterval={30}
-              simMappings={simPorts.map((p) => ({ port: p.port, extension: p.mappedExtension || "" }))}
-              onSave={handleSaveConfig}
+              simPorts={simConfigs}
+              isLoading={simLoading}
+              onConfigSaved={() => {
+                queryClient.invalidateQueries({ queryKey: ["sim-ports"] });
+              }}
             />
           </TabsContent>
         </Tabs>
