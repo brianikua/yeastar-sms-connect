@@ -44,6 +44,33 @@ export type Database = {
         }
         Relationships: []
       }
+      gateway_config: {
+        Row: {
+          api_password: string
+          api_username: string
+          created_at: string
+          gateway_ip: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          api_password?: string
+          api_username?: string
+          created_at?: string
+          gateway_ip?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          api_password?: string
+          api_username?: string
+          created_at?: string
+          gateway_ip?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sim_port_config: {
         Row: {
           carrier: string | null
