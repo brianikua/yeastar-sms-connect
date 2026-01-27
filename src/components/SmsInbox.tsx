@@ -1,7 +1,9 @@
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { MessageSquare, Clock } from "lucide-react";
+import { SmsFilters, SmsFiltersState } from "./SmsFilters";
 
 interface SmsMessage {
   id: string;
@@ -10,17 +12,71 @@ interface SmsMessage {
   content: string;
   timestamp: string;
   isNew: boolean;
+  status?: string;
 }
 
 interface SmsInboxProps {
   messages: SmsMessage[];
 }
 
+const initialFilters: SmsFiltersState = {
+  search: "",
+  simPort: "all",
+  status: "all",
+  dateFrom: undefined,
+  dateTo: undefined,
+};
+
 export const SmsInbox = ({ messages }: SmsInboxProps) => {
+  const [filters, setFilters] = useState<SmsFiltersState>(initialFilters);
+
+  // Get unique SIM ports from messages
+  const simPorts = useMemo(() => {
+    const ports = new Set(messages.map((m) => m.simPort));
+    return Array.from(ports).sort((a, b) => a - b);
+  }, [messages]);
+
+  // Filter messages based on current filters
+  const filteredMessages = useMemo(() => {
+    return messages.filter((message) => {
+      // Search filter
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        const matchesSender = message.sender.toLowerCase().includes(searchLower);
+        const matchesContent = message.content.toLowerCase().includes(searchLower);
+        if (!matchesSender && !matchesContent) return false;
+      }
+
+      // SIM Port filter
+      if (filters.simPort !== "all" && message.simPort !== parseInt(filters.simPort)) {
+        return false;
+      }
+
+      // Status filter
+      if (filters.status !== "all") {
+        const messageStatus = message.isNew ? "unread" : (message.status || "read");
+        if (messageStatus !== filters.status) return false;
+      }
+
+      // Date filters
+      if (filters.dateFrom || filters.dateTo) {
+        const messageDate = new Date(message.timestamp);
+        if (filters.dateFrom && messageDate < filters.dateFrom) return false;
+        if (filters.dateTo) {
+          const endOfDay = new Date(filters.dateTo);
+          endOfDay.setHours(23, 59, 59, 999);
+          if (messageDate > endOfDay) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [messages, filters]);
+
   return (
     <Card className="card-glow border-border/50 bg-card h-full">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
               <MessageSquare className="w-5 h-5 text-primary" />
@@ -28,48 +84,64 @@ export const SmsInbox = ({ messages }: SmsInboxProps) => {
             <CardTitle className="text-base font-semibold">SMS Inbox</CardTitle>
           </div>
           <Badge variant="secondary" className="font-mono">
-            {messages.length} messages
+            {filteredMessages.length}
+            {filteredMessages.length !== messages.length && ` / ${messages.length}`} messages
           </Badge>
         </div>
+        <SmsFilters
+          filters={filters}
+          onFiltersChange={setFilters}
+          simPorts={simPorts}
+        />
       </CardHeader>
       <CardContent className="p-0">
-        <ScrollArea className="h-[400px]">
-          <div className="divide-y divide-border/50">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`p-4 hover:bg-muted/30 transition-colors ${
-                  message.isNew ? "border-l-2 border-l-primary" : ""
-                }`}
-              >
-                <div className="flex items-start justify-between gap-4 mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-sm font-medium text-foreground">
-                      {message.sender}
-                    </span>
-                    <Badge 
-                      variant="outline" 
-                      className="text-xs font-mono border-primary/30 text-primary"
-                    >
-                      SIM {message.simPort}
-                    </Badge>
-                    {message.isNew && (
-                      <Badge className="text-xs bg-primary/20 text-primary border-0">
-                        New
+        <ScrollArea className="h-[350px]">
+          {filteredMessages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-[200px] text-muted-foreground">
+              <MessageSquare className="w-10 h-10 mb-2 opacity-50" />
+              <p className="text-sm">No messages found</p>
+              {filters.search && (
+                <p className="text-xs mt-1">Try adjusting your search filters</p>
+              )}
+            </div>
+          ) : (
+            <div className="divide-y divide-border/50">
+              {filteredMessages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`p-4 hover:bg-muted/30 transition-colors ${
+                    message.isNew ? "border-l-2 border-l-primary" : ""
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4 mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-sm font-medium text-foreground">
+                        {message.sender}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className="text-xs font-mono border-primary/30 text-primary"
+                      >
+                        SIM {message.simPort}
                       </Badge>
-                    )}
+                      {message.isNew && (
+                        <Badge className="text-xs bg-primary/20 text-primary border-0">
+                          New
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Clock className="w-3 h-3" />
+                      <span className="font-mono">{message.timestamp}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Clock className="w-3 h-3" />
-                    <span className="font-mono">{message.timestamp}</span>
-                  </div>
+                  <p className="text-sm text-secondary-foreground leading-relaxed">
+                    {message.content}
+                  </p>
                 </div>
-                <p className="text-sm text-secondary-foreground leading-relaxed">
-                  {message.content}
-                </p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </ScrollArea>
       </CardContent>
     </Card>
