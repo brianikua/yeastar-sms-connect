@@ -17,3 +17,6 @@ port = 54323
 
 [functions.poll-tg400]
 verify_jwt = false
+
+[functions.test-gateway-connection]
+verify_jwt = false
