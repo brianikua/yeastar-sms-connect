@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Loader2, Save, Eye, EyeOff, Server } from "lucide-react";
+import { Loader2, Save, Eye, EyeOff, Server, Wifi, WifiOff, CheckCircle2 } from "lucide-react";
 import { useGatewayConfig } from "@/hooks/useGatewayConfig";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 export const GatewaySettingsForm = () => {
   const { config, isLoading, updateConfig } = useGatewayConfig();
   const [showPassword, setShowPassword] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [localConfig, setLocalConfig] = useState({
     gateway_ip: "",
     api_username: "",
@@ -30,7 +32,6 @@ export const GatewaySettingsForm = () => {
     try {
       await updateConfig.mutateAsync(localConfig);
 
-      // Log the configuration change
       await supabase.from("activity_logs").insert({
         event_type: "config_update",
         message: "Gateway configuration updated",
@@ -42,12 +43,56 @@ export const GatewaySettingsForm = () => {
         title: "Gateway settings saved",
         description: "TG400 gateway configuration has been updated.",
       });
+      
+      setConnectionStatus('idle');
     } catch (error) {
       toast({
         title: "Save failed",
         description: error instanceof Error ? error.message : "Failed to save gateway settings",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleTestConnection = async () => {
+    // First save the current config
+    if (localConfig.gateway_ip !== config?.gateway_ip || 
+        localConfig.api_username !== config?.api_username || 
+        localConfig.api_password !== config?.api_password) {
+      await handleSave();
+    }
+
+    setIsTesting(true);
+    setConnectionStatus('idle');
+
+    try {
+      const { data, error } = await supabase.functions.invoke('test-gateway-connection');
+
+      if (error) throw error;
+
+      if (data?.success) {
+        setConnectionStatus('success');
+        toast({
+          title: "Connection successful",
+          description: `Connected to gateway at ${localConfig.gateway_ip} (${data.responseTime}ms)`,
+        });
+      } else {
+        setConnectionStatus('error');
+        toast({
+          title: "Connection failed",
+          description: data?.error || "Could not connect to gateway",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      setConnectionStatus('error');
+      toast({
+        title: "Test failed",
+        description: error instanceof Error ? error.message : "Failed to test connection",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTesting(false);
     }
   };
 
@@ -74,7 +119,10 @@ export const GatewaySettingsForm = () => {
           <Input
             id="gateway-ip"
             value={localConfig.gateway_ip}
-            onChange={(e) => setLocalConfig((prev) => ({ ...prev, gateway_ip: e.target.value }))}
+            onChange={(e) => {
+              setLocalConfig((prev) => ({ ...prev, gateway_ip: e.target.value }));
+              setConnectionStatus('idle');
+            }}
             className="font-mono text-sm h-9 bg-muted/50 border-border/50"
             placeholder="192.168.1.100"
           />
@@ -87,7 +135,10 @@ export const GatewaySettingsForm = () => {
           <Input
             id="api-username"
             value={localConfig.api_username}
-            onChange={(e) => setLocalConfig((prev) => ({ ...prev, api_username: e.target.value }))}
+            onChange={(e) => {
+              setLocalConfig((prev) => ({ ...prev, api_username: e.target.value }));
+              setConnectionStatus('idle');
+            }}
             className="text-sm h-9 bg-muted/50 border-border/50"
             placeholder="admin"
           />
@@ -102,7 +153,10 @@ export const GatewaySettingsForm = () => {
               id="api-password"
               type={showPassword ? "text" : "password"}
               value={localConfig.api_password}
-              onChange={(e) => setLocalConfig((prev) => ({ ...prev, api_password: e.target.value }))}
+              onChange={(e) => {
+                setLocalConfig((prev) => ({ ...prev, api_password: e.target.value }));
+                setConnectionStatus('idle');
+              }}
               className="text-sm h-9 bg-muted/50 border-border/50 pr-9"
               placeholder="••••••••"
             />
@@ -123,7 +177,26 @@ export const GatewaySettingsForm = () => {
         </div>
       </div>
 
-      <div className="flex justify-end pt-2">
+      <div className="flex items-center justify-between pt-2">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleTestConnection}
+          disabled={isTesting || !localConfig.gateway_ip}
+          className="gap-2"
+        >
+          {isTesting ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : connectionStatus === 'success' ? (
+            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+          ) : connectionStatus === 'error' ? (
+            <WifiOff className="w-4 h-4 text-destructive" />
+          ) : (
+            <Wifi className="w-4 h-4" />
+          )}
+          {isTesting ? "Testing..." : "Test Connection"}
+        </Button>
+
         <Button
           size="sm"
           onClick={handleSave}
