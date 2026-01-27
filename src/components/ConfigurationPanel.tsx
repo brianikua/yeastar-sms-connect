@@ -4,9 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import { Settings, Save, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { GatewaySettingsForm } from "./GatewaySettingsForm";
 
 interface SimPortConfig {
   id: string;
@@ -227,9 +229,9 @@ export const ConfigurationPanel = ({
           </div>
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          Gateway settings (IP, credentials) are configured via environment variables for security.
-        </p>
+        <Separator className="my-4" />
+
+        <GatewaySettingsForm />
       </CardContent>
     </Card>
   );
