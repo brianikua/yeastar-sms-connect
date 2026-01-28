@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { MessageSquare, Clock } from "lucide-react";
 import { SmsFilters, SmsFiltersState } from "./SmsFilters";
-
+import { ManualSmsImport } from "./ManualSmsImport";
 interface SmsMessage {
   id: string;
   sender: string;
@@ -83,10 +83,13 @@ export const SmsInbox = ({ messages }: SmsInboxProps) => {
             </div>
             <CardTitle className="text-base font-semibold">SMS Inbox</CardTitle>
           </div>
-          <Badge variant="secondary" className="font-mono">
-            {filteredMessages.length}
-            {filteredMessages.length !== messages.length && ` / ${messages.length}`} messages
-          </Badge>
+          <div className="flex items-center gap-2">
+            <ManualSmsImport />
+            <Badge variant="secondary" className="font-mono">
+              {filteredMessages.length}
+              {filteredMessages.length !== messages.length && ` / ${messages.length}`} messages
+            </Badge>
+          </div>
         </div>
         <SmsFilters
           filters={filters}
