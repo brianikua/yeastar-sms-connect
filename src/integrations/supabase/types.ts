@@ -71,6 +71,39 @@ export type Database = {
         }
         Relationships: []
       }
+      pbx_config: {
+        Row: {
+          api_password: string
+          api_username: string
+          created_at: string
+          id: string
+          pbx_ip: string
+          pbx_port: number
+          updated_at: string
+          web_port: number
+        }
+        Insert: {
+          api_password?: string
+          api_username?: string
+          created_at?: string
+          id?: string
+          pbx_ip?: string
+          pbx_port?: number
+          updated_at?: string
+          web_port?: number
+        }
+        Update: {
+          api_password?: string
+          api_username?: string
+          created_at?: string
+          id?: string
+          pbx_ip?: string
+          pbx_port?: number
+          updated_at?: string
+          web_port?: number
+        }
+        Relationships: []
+      }
       sim_port_config: {
         Row: {
           carrier: string | null
