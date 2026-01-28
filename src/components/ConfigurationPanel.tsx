@@ -9,6 +9,7 @@ import { Settings, Save, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { GatewaySettingsForm } from "./GatewaySettingsForm";
+import { PbxSettingsForm } from "./PbxSettingsForm";
 import { LocalAgentGuide } from "./LocalAgentGuide";
 
 interface SimPortConfig {
@@ -233,6 +234,10 @@ export const ConfigurationPanel = ({
         <Separator className="my-4" />
 
         <GatewaySettingsForm />
+
+        <Separator className="my-4" />
+
+        <PbxSettingsForm />
 
         <Separator className="my-4" />
 
