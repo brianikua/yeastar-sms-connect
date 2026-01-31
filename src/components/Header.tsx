@@ -1,6 +1,7 @@
 import { Radio, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusIndicator } from "./StatusIndicator";
+import { AgentStatusIndicator } from "./AgentStatusIndicator";
 
 interface HeaderProps {
   systemStatus: "online" | "offline" | "warning";
@@ -30,6 +31,8 @@ export const Header = ({ systemStatus, lastSync, onRefresh }: HeaderProps) => {
 
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-4 text-sm">
+            <AgentStatusIndicator />
+            <div className="h-4 w-px bg-border" />
             <StatusIndicator status={systemStatus} label="System" />
             <div className="h-4 w-px bg-border" />
             <span className="text-muted-foreground">
