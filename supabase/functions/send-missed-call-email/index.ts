@@ -111,7 +111,7 @@ serve(async (req) => {
 </html>`;
 
     const { data: emailData, error: emailError } = await resend.emails.send({
-      from: "TG400 Dashboard <onboarding@resend.dev>",
+      from: "TG400 Dashboard <info@nosteq.co.ke>",
       to: [to_email],
       subject: `📞 Missed Call from ${callerNumber} — ${callTime}`,
       html,
