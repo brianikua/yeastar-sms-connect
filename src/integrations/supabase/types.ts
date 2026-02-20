@@ -182,6 +182,33 @@ export type Database = {
         }
         Relationships: []
       }
+      auto_reply_config: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          message: string
+          notification_email: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          message?: string
+          notification_email?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          message?: string
+          notification_email?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       call_queue: {
         Row: {
           completed_at: string | null
@@ -236,6 +263,8 @@ export type Database = {
       call_records: {
         Row: {
           answer_time: string | null
+          callback_attempted: boolean | null
+          callback_notes: string | null
           callee_name: string | null
           callee_number: string
           caller_name: string | null
@@ -261,6 +290,8 @@ export type Database = {
         }
         Insert: {
           answer_time?: string | null
+          callback_attempted?: boolean | null
+          callback_notes?: string | null
           callee_name?: string | null
           callee_number: string
           caller_name?: string | null
@@ -286,6 +317,8 @@ export type Database = {
         }
         Update: {
           answer_time?: string | null
+          callback_attempted?: boolean | null
+          callback_notes?: string | null
           callee_name?: string | null
           callee_number?: string
           caller_name?: string | null
