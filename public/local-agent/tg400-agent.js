@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * TG400 Local Polling Agent v4.0 - AI-Powered Auto-Update
+ * TG400 Local Polling Agent v4.2 - Auto-Reply SMS
  * 
  * Features:
  * - Persistent state file (survives restarts)
@@ -14,6 +14,7 @@
  * - Failed sync auto-reprocessing
  * - AUTO-UPDATE: Checks for new versions and self-updates
  * - PREDICTIVE MAINTENANCE: AI predicts issues before they happen
+ * - AUTO-REPLY SMS: Reads auto_reply_config from cloud and sends reply on each new SMS
  * 
  * Installation: See /local-agent/install.sh
  */
@@ -70,7 +71,7 @@ const CONFIG = {
   
   // Agent Identity
   AGENT_ID: process.env.AGENT_ID || `agent-${crypto.randomBytes(4).toString('hex')}`,
-  VERSION: '4.1.0',
+  VERSION: '4.2.0',
 };
 // ========================================
 
@@ -93,6 +94,12 @@ class TG400Agent {
     this.startTime = new Date();
     this.lastCdrTimestamp = null;
     this.intervals = [];
+
+    // Auto-reply config cache (fetched from cloud)
+    this.autoReplyConfig = {
+      enabled: false,
+      message: 'Thank you for your message. We will get back to you shortly.',
+    };
     
     // Load persistent state
     this.loadState();
@@ -150,6 +157,151 @@ class TG400Agent {
     } catch (error) {
       this.log('warn', `Failed to sync config: ${error.message}`);
     }
+  }
+
+  // ========== AUTO-REPLY CONFIG ==========
+
+  async syncAutoReplyConfig() {
+    try {
+      const url = `${this.config.SUPABASE_URL}/rest/v1/auto_reply_config?select=enabled,message&limit=1`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'apikey': this.config.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${this.config.SUPABASE_ANON_KEY}`,
+        },
+      });
+
+      if (!response.ok) {
+        this.log('warn', `Failed to fetch auto-reply config: HTTP ${response.status}`);
+        return;
+      }
+
+      const rows = await response.json();
+      if (rows && rows.length > 0) {
+        const cfg = rows[0];
+        const wasEnabled = this.autoReplyConfig.enabled;
+        this.autoReplyConfig = {
+          enabled: cfg.enabled === true,
+          message: cfg.message || 'Thank you for your message. We will get back to you shortly.',
+        };
+        if (wasEnabled !== this.autoReplyConfig.enabled) {
+          this.log('info', `Auto-reply ${this.autoReplyConfig.enabled ? 'ENABLED' : 'DISABLED'}`);
+        }
+      }
+    } catch (error) {
+      this.log('warn', `Failed to sync auto-reply config: ${error.message}`);
+    }
+  }
+
+  // ========== SMS AUTO-REPLY ==========
+
+  async sendSmsReply(toNumber, port) {
+    if (!this.autoReplyConfig.enabled) return;
+
+    const replyText = this.autoReplyConfig.message;
+    this.log('info', `Sending auto-reply to ${toNumber} via port ${port}`);
+
+    // Try known TG400 SMS send endpoints
+    const endpoints = [
+      `/api/v1.0/sms/send`,
+      `/cgi-bin/api-send_sms`,
+      `/api/sms/send`,
+    ];
+
+    for (const endpoint of endpoints) {
+      try {
+        const url = `http://${this.config.TG400_IP}${endpoint}`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+
+        // Try JSON body first
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${this.authHeader}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            port,
+            to: toNumber,
+            number: toNumber,
+            message: replyText,
+            text: replyText,
+            content: replyText,
+          }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeout);
+
+        if (response.ok) {
+          this.log('success', `Auto-reply sent to ${toNumber} via port ${port}`);
+
+          // Log to cloud
+          await this.pushToSupabase('activity_logs', {
+            event_type: 'auto_reply_sent',
+            message: `Auto-reply sent to ${toNumber} on SIM port ${port}`,
+            severity: 'info',
+            sim_port: port,
+            metadata: {
+              source: 'local-agent',
+              agent_id: this.config.AGENT_ID,
+              to: toNumber,
+              reply_preview: replyText.substring(0, 50),
+            },
+          });
+          return true;
+        }
+      } catch (error) {
+        // Try next endpoint
+      }
+    }
+
+    // Fallback: form-encoded POST (some gateway firmware versions)
+    for (const endpoint of endpoints) {
+      try {
+        const url = `http://${this.config.TG400_IP}${endpoint}`;
+        const params = new URLSearchParams({
+          port: String(port),
+          to: toNumber,
+          message: replyText,
+        });
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${this.authHeader}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: params.toString(),
+        });
+
+        if (response.ok) {
+          this.log('success', `Auto-reply sent (form-encoded) to ${toNumber} via port ${port}`);
+          await this.pushToSupabase('activity_logs', {
+            event_type: 'auto_reply_sent',
+            message: `Auto-reply sent to ${toNumber} on SIM port ${port}`,
+            severity: 'info',
+            sim_port: port,
+            metadata: { source: 'local-agent', agent_id: this.config.AGENT_ID, to: toNumber },
+          });
+          return true;
+        }
+      } catch (error) {
+        // Try next
+      }
+    }
+
+    this.log('warn', `Failed to send auto-reply to ${toNumber} — no working SMS send endpoint`);
+    await this.pushToSupabase('activity_logs', {
+      event_type: 'auto_reply_failed',
+      message: `Auto-reply failed for ${toNumber} on SIM port ${port}`,
+      severity: 'warning',
+      sim_port: port,
+      metadata: { source: 'local-agent', agent_id: this.config.AGENT_ID },
+    });
+    return false;
   }
 
   restartPollingLoops() {
@@ -534,6 +686,11 @@ class TG400Agent {
         this.messagesSynced++;
         newCount++;
         this.log('success', `SMS synced`, { port, from: smsData.sender_number });
+
+        // Auto-reply: send reply immediately after syncing if enabled
+        if (this.autoReplyConfig.enabled && smsData.sender_number && smsData.sender_number !== 'Unknown') {
+          await this.sendSmsReply(smsData.sender_number, port);
+        }
       } else {
         // Queue for later if cloud unreachable
         this.messageQueue.push({ table: 'sms_messages', data: smsData, timestamp: Date.now() });
@@ -1030,10 +1187,11 @@ class TG400Agent {
       }
     }, this.getConfig('HEARTBEAT_INTERVAL')));
 
-    // Config sync loop
+    // Config sync loop (also refreshes auto-reply config)
     this.intervals.push(setInterval(async () => {
       if (this.isRunning) {
         await this.syncConfigFromCloud();
+        await this.syncAutoReplyConfig();
       }
     }, this.config.CONFIG_SYNC_INTERVAL));
 
@@ -1352,8 +1510,9 @@ class TG400Agent {
     this.log('info', `Repo: ${this.config.REPO_DIR} (auto-update: ${this.config.AUTO_UPDATE_ENABLED ? 'every 5m' : 'disabled'})`);
     this.log('info', `Features: Self-healing, AI diagnostics, Git auto-update, Predictive maintenance`);
 
-    // Sync config from cloud first
+    // Sync config from cloud first (including auto-reply settings)
     await this.syncConfigFromCloud();
+    await this.syncAutoReplyConfig();
 
     // Test connections
     const connections = await this.testConnection();
