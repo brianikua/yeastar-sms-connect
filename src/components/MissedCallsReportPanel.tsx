@@ -11,12 +11,14 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
+  Send,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useMissedCallReport, useMarkCallbackAttempted, useSendMissedCallEmail } from "@/hooks/useMissedCallReport";
 import { useAutoReplyConfig } from "@/hooks/useAutoReplyConfig";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { SendReportDialog } from "@/components/SendReportDialog";
 
 export const MissedCallsReportPanel = () => {
   const { data: calls = [], isLoading } = useMissedCallReport();
@@ -27,6 +29,7 @@ export const MissedCallsReportPanel = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
 
   const pending = calls.filter((c) => !c.callback_attempted);
   const completed = calls.filter((c) => c.callback_attempted);
@@ -60,6 +63,23 @@ export const MissedCallsReportPanel = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header with Send Report button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold">Missed Calls Report</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Track and manage missed call callbacks</p>
+        </div>
+        <Button
+          className="gap-2"
+          onClick={() => setReportDialogOpen(true)}
+        >
+          <Send className="w-4 h-4" />
+          Send Report
+        </Button>
+      </div>
+
+      <SendReportDialog open={reportDialogOpen} onOpenChange={setReportDialogOpen} />
+
       {/* Summary row */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="border-border/50 bg-card">
