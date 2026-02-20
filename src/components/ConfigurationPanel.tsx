@@ -11,6 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { GatewaySettingsForm } from "./GatewaySettingsForm";
 import { PbxSettingsForm } from "./PbxSettingsForm";
 import { LocalAgentGuide } from "./LocalAgentGuide";
+import { AutoReplyPanel } from "./AutoReplyPanel";
 
 interface SimPortConfig {
   id: string;
@@ -238,6 +239,10 @@ export const ConfigurationPanel = ({
         <Separator className="my-4" />
 
         <PbxSettingsForm />
+
+        <Separator className="my-4" />
+
+        <AutoReplyPanel />
 
         <Separator className="my-4" />
 

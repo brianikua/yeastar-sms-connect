@@ -17,6 +17,7 @@ import { TelegramPanel } from "@/components/TelegramPanel";
 import { ContactsPanel } from "@/components/ContactsPanel";
 import { PredictiveMaintenancePanel } from "@/components/PredictiveMaintenancePanel";
 import { AiAutomationPanel } from "@/components/AiAutomationPanel";
+import { MissedCallsReportPanel } from "@/components/MissedCallsReportPanel";
 import { DashboardSidebar, DashboardTab } from "@/components/DashboardSidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Server, Phone, Database } from "lucide-react";
@@ -177,6 +178,8 @@ const Index = () => {
           {activeTab === "telegram" && <TelegramPanel />}
 
           {activeTab === "contacts" && <ContactsPanel />}
+
+          {activeTab === "reports" && <MissedCallsReportPanel />}
         </main>
       </div>
     </div>
