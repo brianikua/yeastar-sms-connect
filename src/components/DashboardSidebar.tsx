@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Menu,
   X,
+  ClipboardList,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -27,7 +28,8 @@ export type DashboardTab =
   | "config"
   | "ai"
   | "telegram"
-  | "contacts";
+  | "contacts"
+  | "reports";
 
 interface NavItem {
   id: DashboardTab;
@@ -38,6 +40,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "calls", label: "Calls", icon: PhoneCall },
+  { id: "reports", label: "Reports", icon: ClipboardList },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "logs", label: "Logs", icon: FileText },
   { id: "contacts", label: "Contacts", icon: Users },
