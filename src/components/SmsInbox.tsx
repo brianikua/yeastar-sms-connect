@@ -48,10 +48,18 @@ export const SmsInbox = ({ messages }: SmsInboxProps) => {
   const categorize = useCategorizeMessages();
   const { getContactName } = useContactLookup();
 
-  // Get unique SIM ports from messages
+  // Get unique SIM ports from messages with counts
   const simPorts = useMemo(() => {
     const ports = new Set(messages.map((m) => m.simPort));
     return Array.from(ports).sort((a, b) => a - b);
+  }, [messages]);
+
+  const portCounts = useMemo(() => {
+    const counts: Record<number, number> = {};
+    messages.forEach((m) => {
+      counts[m.simPort] = (counts[m.simPort] || 0) + 1;
+    });
+    return counts;
   }, [messages]);
 
   // Count uncategorized messages
@@ -124,10 +132,13 @@ export const SmsInbox = ({ messages }: SmsInboxProps) => {
                 <SelectValue placeholder="All Ports" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Ports</SelectItem>
+                <SelectItem value="all">All Ports ({messages.length})</SelectItem>
                 {simPorts.map((port) => (
                   <SelectItem key={port} value={port.toString()}>
                     SIM Port {port}
+                    <Badge variant="secondary" className="ml-1.5 px-1.5 py-0 text-[10px] font-mono">
+                      {portCounts[port] || 0}
+                    </Badge>
                   </SelectItem>
                 ))}
               </SelectContent>
