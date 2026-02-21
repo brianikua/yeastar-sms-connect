@@ -659,12 +659,21 @@ class TG400Agent {
     return [];
   }
 
-  async processSmsMessages(messages, port) {
+  async processSmsMessages(messages, polledPort) {
     let newCount = 0;
 
     for (const msg of messages) {
+      // Extract the ACTUAL port from the message data returned by the gateway.
+      // Yeastar TG400 firmware often returns all SMS regardless of the port query param,
+      // so we must read the port from each individual message record.
+      const actualPort = parseInt(msg.port, 10) 
+        || parseInt(msg.sim_port, 10) 
+        || parseInt(msg.slot, 10) 
+        || parseInt(msg.channel, 10) 
+        || polledPort; // Only fall back to polledPort if gateway truly doesn't include it
+
       const externalId = msg.id || msg.message_id || 
-        `${port}-${msg.from || msg.sender}-${msg.time || Date.now()}-${(msg.content || msg.text || '').substring(0, 20)}`;
+        `${actualPort}-${msg.from || msg.sender}-${msg.time || Date.now()}-${(msg.content || msg.text || '').substring(0, 20)}`;
       
       if (this.processedIds.has(externalId)) {
         continue;
@@ -672,7 +681,7 @@ class TG400Agent {
 
       const smsData = {
         external_id: externalId,
-        sim_port: port,
+        sim_port: actualPort,
         sender_number: msg.from || msg.sender || msg.number || 'Unknown',
         message_content: msg.content || msg.text || msg.message || '',
         received_at: msg.time || msg.received_at || new Date().toISOString(),
@@ -685,17 +694,17 @@ class TG400Agent {
         this.processedIds.add(externalId);
         this.messagesSynced++;
         newCount++;
-        this.log('success', `SMS synced`, { port, from: smsData.sender_number });
+        this.log('success', `SMS synced`, { port: actualPort, from: smsData.sender_number });
 
         // Auto-reply: send reply immediately after syncing if enabled
         if (this.autoReplyConfig.enabled && smsData.sender_number && smsData.sender_number !== 'Unknown') {
-          await this.sendSmsReply(smsData.sender_number, port);
+          await this.sendSmsReply(smsData.sender_number, actualPort);
         }
       } else {
         // Queue for later if cloud unreachable
         this.messageQueue.push({ table: 'sms_messages', data: smsData, timestamp: Date.now() });
         this.saveQueue();
-        this.log('warn', `SMS queued for later sync`, { port, from: smsData.sender_number });
+        this.log('warn', `SMS queued for later sync`, { port: actualPort, from: smsData.sender_number });
       }
     }
 
