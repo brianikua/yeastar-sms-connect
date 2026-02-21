@@ -4,6 +4,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Clock, Sparkles, Loader2, User } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { SmsFilters, SmsFiltersState } from "./SmsFilters";
 import { ManualSmsImport } from "./ManualSmsImport";
 import { SmsCategoryBadge, SmsCategory } from "./SmsCategoryBadge";
@@ -109,6 +116,22 @@ export const SmsInbox = ({ messages }: SmsInboxProps) => {
             <CardTitle className="text-base font-semibold">SMS Inbox</CardTitle>
           </div>
           <div className="flex items-center gap-2">
+            <Select
+              value={filters.simPort}
+              onValueChange={(value) => setFilters({ ...filters, simPort: value })}
+            >
+              <SelectTrigger className="h-8 w-[130px] text-xs bg-muted/50 border-border/50">
+                <SelectValue placeholder="All Ports" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Ports</SelectItem>
+                {simPorts.map((port) => (
+                  <SelectItem key={port} value={port.toString()}>
+                    SIM Port {port}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {uncategorizedCount > 0 && (
               <Button
                 variant="outline"
