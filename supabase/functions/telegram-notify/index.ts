@@ -267,7 +267,7 @@ Deno.serve(async (req) => {
 
       // Send to agent's personal Telegram if configured
       if (agent.telegram_chat_id) {
-        const personalMsg = `🏅 *Your Shift Rating*\n\n`;
+        const personalMsg = `🏅 *Your Shift Rating*\n\n`
           + `${stars} *${escapeMarkdown(label)}* \\(${rating}/5\\)${commentLine}\n\n`
           + `_Keep up the great work\\!_`;
 
