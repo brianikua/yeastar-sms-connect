@@ -26,6 +26,8 @@ export interface ExtensionBreakdown {
   missedCalls: number;
   calledBack: number;
   smsCount: number;
+  totalTalkTime: number;
+  avgTalkTime: number;
 }
 
 export interface AnalyticsData {
