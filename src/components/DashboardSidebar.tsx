@@ -3,11 +3,9 @@ import {
   LayoutDashboard,
   PhoneCall,
   BarChart3,
-  Settings,
   ChevronLeft,
   ChevronRight,
   Menu,
-  X,
   Shield,
   Crown,
 } from "lucide-react";
