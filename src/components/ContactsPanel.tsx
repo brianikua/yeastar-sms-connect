@@ -25,6 +25,7 @@ import {
   Loader2,
   Merge,
   ArrowUpToLine,
+  FileDown,
 } from "lucide-react";
 import { useContacts, contactsToGoogleCSV, parseGoogleCSV, Contact } from "@/hooks/useContacts";
 import { useGoogleContacts } from "@/hooks/useGoogleContacts";
@@ -45,6 +46,20 @@ export const ContactsPanel = () => {
       (c.name || "").toLowerCase().includes(q)
     );
   });
+
+  const handleDownloadTemplate = () => {
+    const template = `Name,Phone 1 - Value,Notes
+John Doe,+1234567890,VIP customer
+Jane Smith,+0987654321,Supplier
+Office Reception,+1122334455,Main office line`;
+    const blob = new Blob([template], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "contacts_template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleExport = () => {
     const csv = contactsToGoogleCSV(contacts);
@@ -175,6 +190,15 @@ export const ContactsPanel = () => {
             >
               <Upload className="w-4 h-4" />
               Import CSV
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-muted-foreground"
+              onClick={handleDownloadTemplate}
+            >
+              <FileDown className="w-4 h-4" />
+              CSV Template
             </Button>
             <input
               ref={fileInputRef}
