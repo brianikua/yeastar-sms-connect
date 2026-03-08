@@ -133,6 +133,8 @@ const Index = () => {
           )}
 
           {activeTab === "staff" && <StaffPanel />}
+
+          {activeTab === "roles" && <RoleManagementPanel />}
         </main>
       </div>
     </div>
