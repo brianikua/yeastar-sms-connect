@@ -10,7 +10,6 @@ import {
   X,
   Shield,
   Crown,
-  UserCircle,
 } from "lucide-react";
 import { usePendingSwapCount } from "@/hooks/useShiftSwap";
 import { Button } from "@/components/ui/button";
