@@ -1596,6 +1596,31 @@ fi
 SUPABASE_URL="https://aougsyziktukjvkmglzb.supabase.co"
 SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvdWdzeXppa3R1a2p2a21nbHpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkzNDg5NTYsImV4cCI6MjA4NDkyNDk1Nn0.dcsZwEJXND9xdNA1dR-uHH7r6WylGwL7xVKJSFL_C44"
 
+# Service Role Key (required for agent_config access)
+echo ""
+echo -e "${GREEN}=== Cloud Security Settings ===${NC}"
+echo -e "${YELLOW}The Service Role Key is required for the agent to read configuration from the cloud.${NC}"
+echo -e "${YELLOW}You can find this key in your Lovable Cloud backend settings.${NC}"
+
+if [ -f "$CONFIG_FILE" ]; then
+    CURRENT_SRK=$(echo "$EXISTING" | jq -r '.SUPABASE_SERVICE_ROLE_KEY // ""')
+    SRK_DISPLAY="(configured)"
+    if [ -z "$CURRENT_SRK" ]; then
+        SRK_DISPLAY="(not set)"
+    fi
+else
+    CURRENT_SRK=""
+    SRK_DISPLAY="(not set)"
+fi
+
+read -sp "Service Role Key [$SRK_DISPLAY]: " SUPABASE_SERVICE_ROLE_KEY
+echo ""
+SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-$CURRENT_SRK}
+
+if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+    echo -e "${YELLOW}⚠ No Service Role Key set. Cloud config sync will be limited.${NC}"
+fi
+
 # Create config file
 cat > "$CONFIG_FILE" << EOF
 {
@@ -1609,6 +1634,7 @@ cat > "$CONFIG_FILE" << EOF
   "PBX_WEB_PORT": $PBX_WEB_PORT,
   "SUPABASE_URL": "$SUPABASE_URL",
   "SUPABASE_ANON_KEY": "$SUPABASE_ANON_KEY",
+  "SUPABASE_SERVICE_ROLE_KEY": "$SUPABASE_SERVICE_ROLE_KEY",
   "POLL_INTERVAL": $POLL_INTERVAL,
   "GITHUB_REPO_URL": "$GITHUB_REPO_URL",
   "REPO_DIR": "$REPO_DIR",
