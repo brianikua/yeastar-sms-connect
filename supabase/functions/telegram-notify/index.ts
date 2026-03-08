@@ -83,7 +83,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    const { action } = await req.json();
+    const body = await req.json();
+    const { action } = body;
     console.log(`Telegram notify action: ${action}`);
 
     let messageText = "";
@@ -240,6 +241,42 @@ Deno.serve(async (req) => {
         messageText += `🔴 *${type}*\n  ${msg}${diagnosis}\n  _${time}_\n\n`;
       }
       if (!(errorData || []).length) messageText += `✅ _No unresolved errors_`;
+
+    } else if (action === "rating_notification") {
+      const { agent_id, rating, comment: ratingComment } = body;
+
+      // Look up agent to get their telegram_chat_id
+      const { data: agent } = await supabase
+        .from("agents")
+        .select("name, telegram_chat_id")
+        .eq("id", agent_id)
+        .single();
+
+      if (!agent) throw new Error("Agent not found");
+
+      const stars = "⭐".repeat(rating);
+      const label = ["", "Poor", "Below Average", "Average", "Good", "Excellent"][rating] || "";
+      const name = escapeMarkdown(agent.name);
+      const commentLine = ratingComment
+        ? `\n💬 _${escapeMarkdown(ratingComment)}_`
+        : "";
+
+      messageText = `🏅 *NEW SHIFT RATING*\n\n`;
+      messageText += `👤 *Agent:* ${name}\n`;
+      messageText += `${stars} *${escapeMarkdown(label)}* \\(${rating}/5\\)${commentLine}`;
+
+      // Send to agent's personal Telegram if configured
+      if (agent.telegram_chat_id) {
+        const personalMsg = `🏅 *Your Shift Rating*\n\n`
+          + `${stars} *${escapeMarkdown(label)}* \\(${rating}/5\\)${commentLine}\n\n`
+          + `_Keep up the great work\\!_`;
+
+        await sendTelegram(TELEGRAM_BOT_TOKEN, {
+          chat_id: agent.telegram_chat_id,
+          text: personalMsg,
+          parse_mode: "MarkdownV2",
+        });
+      }
 
     } else {
       throw new Error(`Unknown action: ${action}`);
