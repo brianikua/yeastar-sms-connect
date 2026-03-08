@@ -321,6 +321,33 @@ export type Database = {
         }
         Relationships: []
       }
+      call_autosms_config: {
+        Row: {
+          answered_message: string
+          created_at: string
+          enabled: boolean
+          id: string
+          missed_message: string
+          updated_at: string
+        }
+        Insert: {
+          answered_message?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          missed_message?: string
+          updated_at?: string
+        }
+        Update: {
+          answered_message?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          missed_message?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       call_queue: {
         Row: {
           completed_at: string | null
