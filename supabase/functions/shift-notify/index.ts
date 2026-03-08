@@ -277,10 +277,25 @@ serve(async (req) => {
 
         const emailBody = `<h2>📊 Daily Report — ${agent.name}</h2><p>📅 ${today}</p><table style="border-collapse:collapse;margin:8px 0;"><tr><td style="padding:2px 8px;">⏰ Shift time</td><td style="padding:2px 8px;">${Math.floor(shiftTime / 60)}h ${Math.round(shiftTime % 60)}m</td></tr><tr><td style="padding:2px 8px;">📞 Calls</td><td style="padding:2px 8px;">${totalCalls} (${inbound}↙ ${outbound}↗)</td></tr><tr><td style="padding:2px 8px;">✅ Answered</td><td style="padding:2px 8px;">${answered}</td></tr><tr><td style="padding:2px 8px;">❌ Missed</td><td style="padding:2px 8px;">${missed}</td></tr><tr><td style="padding:2px 8px;">⏱ Talk time</td><td style="padding:2px 8px;">${talkH}h ${talkM}m</td></tr></table>${missed > 0 ? `<p>⚠️ You have ${missed} missed call${missed > 1 ? "s" : ""} — please follow up!</p>` : "<p>✨ Great job — no missed calls!</p>"}`;
 
-        if (agent.telegram_chat_id && telegramBotToken) {
-          agentTelegramMessages.push({ chatId: agent.telegram_chat_id, text: telegramMsg });
-        } else if (agent.email && resendApiKey) {
-          await sendEmail(resendApiKey, [agent.email], `📊 Daily Report — ${agent.name}`, emailBody);
+        const pref = agent.notification_channel || "telegram";
+        const canTelegram = agent.telegram_chat_id && telegramBotToken;
+        const canEmail = agent.email && resendApiKey;
+
+        if (pref === "both") {
+          if (canTelegram) agentTelegramMessages.push({ chatId: agent.telegram_chat_id, text: telegramMsg });
+          if (canEmail) await sendEmail(resendApiKey!, [agent.email], `📊 Daily Report — ${agent.name}`, emailBody);
+        } else if (pref === "telegram") {
+          if (canTelegram) {
+            agentTelegramMessages.push({ chatId: agent.telegram_chat_id, text: telegramMsg });
+          } else if (canEmail) {
+            await sendEmail(resendApiKey!, [agent.email], `📊 Daily Report — ${agent.name}`, emailBody);
+          }
+        } else if (pref === "email") {
+          if (canEmail) {
+            await sendEmail(resendApiKey!, [agent.email], `📊 Daily Report — ${agent.name}`, emailBody);
+          } else if (canTelegram) {
+            agentTelegramMessages.push({ chatId: agent.telegram_chat_id, text: telegramMsg });
+          }
         }
       }
       telegramMessage = `📊 Daily agent reports sent to ${(agents || []).length} agents`;
