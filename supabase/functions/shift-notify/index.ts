@@ -298,13 +298,14 @@ serve(async (req) => {
       );
     }
 
-    // Process unified agent notifications: Telegram if available, email fallback
+    // Process unified agent notifications: respect notification_channel preference
     let emailFallbackCount = 0;
+    let telegramSentCount = 0;
     if (agentNotifications.length > 0) {
       const agentIds = [...new Set(agentNotifications.map((n) => n.agentId))];
       const { data: agentsData } = await supabase
         .from("agents")
-        .select("id, telegram_chat_id, email")
+        .select("id, telegram_chat_id, email, notification_channel")
         .in("id", agentIds);
 
       const agentMap = new Map((agentsData || []).map((a: any) => [a.id, a]));
@@ -313,13 +314,37 @@ serve(async (req) => {
         const agent = agentMap.get(notification.agentId);
         if (!agent) continue;
 
-        if (agent.telegram_chat_id && telegramBotToken) {
-          // Send via Telegram
-          await sendTelegram(telegramBotToken, agent.telegram_chat_id, notification.telegramText);
-        } else if (agent.email && resendApiKey) {
-          // Fallback to email
-          await sendEmail(resendApiKey, [agent.email], notification.emailSubject, notification.emailHtml);
-          emailFallbackCount++;
+        const pref = agent.notification_channel || "telegram";
+        const canTelegram = agent.telegram_chat_id && telegramBotToken;
+        const canEmail = agent.email && resendApiKey;
+
+        if (pref === "both") {
+          if (canTelegram) {
+            await sendTelegram(telegramBotToken!, agent.telegram_chat_id, notification.telegramText);
+            telegramSentCount++;
+          }
+          if (canEmail) {
+            await sendEmail(resendApiKey!, [agent.email], notification.emailSubject, notification.emailHtml);
+            emailFallbackCount++;
+          }
+        } else if (pref === "telegram") {
+          if (canTelegram) {
+            await sendTelegram(telegramBotToken!, agent.telegram_chat_id, notification.telegramText);
+            telegramSentCount++;
+          } else if (canEmail) {
+            // Fallback to email if Telegram not configured
+            await sendEmail(resendApiKey!, [agent.email], notification.emailSubject, notification.emailHtml);
+            emailFallbackCount++;
+          }
+        } else if (pref === "email") {
+          if (canEmail) {
+            await sendEmail(resendApiKey!, [agent.email], notification.emailSubject, notification.emailHtml);
+            emailFallbackCount++;
+          } else if (canTelegram) {
+            // Fallback to Telegram if email not configured
+            await sendTelegram(telegramBotToken!, agent.telegram_chat_id, notification.telegramText);
+            telegramSentCount++;
+          }
         }
       }
     }
