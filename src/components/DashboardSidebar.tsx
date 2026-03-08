@@ -188,7 +188,7 @@ export const DashboardSidebar = ({ activeTab, onTabChange }: DashboardSidebarPro
           </Button>
         </div>
 
-        <NavItems activeTab={activeTab} onTabChange={onTabChange} collapsed={collapsed} />
+        <NavItems activeTab={activeTab} onTabChange={onTabChange} collapsed={collapsed} visibleItems={visibleItems} />
       </aside>
     </TooltipProvider>
   );
