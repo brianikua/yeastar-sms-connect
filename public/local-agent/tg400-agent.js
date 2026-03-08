@@ -240,22 +240,35 @@ class TG400Agent {
 
   // ========== CALL AUTO-SMS SENDING ==========
 
-  async sendCallAutoSms(callerNumber, callStatus, simPort) {
+  async sendCallAutoSms(callerNumber, callStatus, simPort, callData = {}) {
     if (!this.callAutoSmsConfig.enabled) return;
     if (!callerNumber || callerNumber === 'Unknown') return;
 
-    // Determine which message to send based on call status
-    let smsText;
+    // Determine which message template to send based on call status
+    let smsTemplate;
     let eventType;
     if (callStatus === 'answered') {
-      smsText = this.callAutoSmsConfig.answered_message;
+      smsTemplate = this.callAutoSmsConfig.answered_message;
       eventType = 'call_autosms_answered';
     } else if (callStatus === 'missed' || callStatus === 'busy' || callStatus === 'failed') {
-      smsText = this.callAutoSmsConfig.missed_message;
+      smsTemplate = this.callAutoSmsConfig.missed_message;
       eventType = 'call_autosms_missed';
     } else {
       return; // Don't send for other statuses (voicemail, internal, etc.)
     }
+
+    // Replace template variables
+    const now = new Date();
+    const callTime = callData.start_time ? new Date(callData.start_time) : now;
+    const smsText = smsTemplate
+      .replace(/\{caller_name\}/gi, callData.caller_name || callerNumber)
+      .replace(/\{caller_number\}/gi, callerNumber)
+      .replace(/\{time\}/gi, callTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }))
+      .replace(/\{date\}/gi, callTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }))
+      .replace(/\{duration\}/gi, callData.total_duration ? `${Math.floor(callData.total_duration / 60)}m ${callData.total_duration % 60}s` : '0s')
+      .replace(/\{extension\}/gi, callData.extension || '')
+      .replace(/\{status\}/gi, callStatus)
+      .replace(/\{sim_port\}/gi, String(simPort || ''));
 
     // Only send for inbound calls (client calling us)
     this.log('info', `Sending call auto-SMS (${callStatus}) to ${callerNumber}`);
@@ -1041,9 +1054,9 @@ class TG400Agent {
         
         this.log('success', `CDR synced`, { caller: callData.caller_number, callee: callData.callee_number, status: callData.status });
 
-        // Send call auto-SMS for inbound calls
+        // Send call auto-SMS for inbound calls (pass full call data for template variables)
         if (callData.direction === 'inbound') {
-          await this.sendCallAutoSms(callData.caller_number, callData.status, callData.sim_port);
+          await this.sendCallAutoSms(callData.caller_number, callData.status, callData.sim_port, callData);
         }
       } else {
         this.messageQueue.push({ table: 'call_records', data: callData, timestamp: Date.now() });

@@ -80,6 +80,28 @@ export const CallAutoSmsPanel = () => {
         Automatically send SMS to callers after each call. Different messages are sent based on whether the call was answered or missed, helping build client trust and engagement.
       </p>
 
+      <div className="p-3 rounded-lg bg-accent/30 border border-accent/50">
+        <p className="text-xs font-medium text-accent-foreground mb-1">Available Template Variables</p>
+        <div className="flex flex-wrap gap-1.5">
+          {[
+            { var: '{caller_name}', desc: 'Caller name or number' },
+            { var: '{caller_number}', desc: 'Phone number' },
+            { var: '{time}', desc: 'Call time' },
+            { var: '{date}', desc: 'Call date' },
+            { var: '{duration}', desc: 'Call duration' },
+            { var: '{extension}', desc: 'PBX extension' },
+          ].map((v) => (
+            <code
+              key={v.var}
+              className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono text-muted-foreground cursor-default"
+              title={v.desc}
+            >
+              {v.var}
+            </code>
+          ))}
+        </div>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2">
         <div className="p-4 rounded-lg bg-muted/30 border border-border/30 space-y-2">
           <div className="flex items-center gap-2">
