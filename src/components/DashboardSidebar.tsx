@@ -31,16 +31,24 @@ interface NavItem {
   id: DashboardTab;
   label: string;
   icon: React.ElementType;
+  minRole: AppRole;
 }
 
 const navItems: NavItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "comms", label: "Calls & Contacts", icon: PhoneCall },
-  { id: "insights", label: "Insights", icon: BarChart3 },
-  { id: "staff", label: "Staff", icon: Shield },
-  { id: "roles", label: "Roles", icon: Crown },
-  { id: "config", label: "Configuration", icon: Settings },
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "viewer" },
+  { id: "comms", label: "Calls & Contacts", icon: PhoneCall, minRole: "operator" },
+  { id: "insights", label: "Insights", icon: BarChart3, minRole: "viewer" },
+  { id: "staff", label: "Staff", icon: Shield, minRole: "admin" },
+  { id: "roles", label: "Roles", icon: Crown, minRole: "admin" },
+  { id: "config", label: "Configuration", icon: Settings, minRole: "admin" },
 ];
+
+const ROLE_LEVEL: Record<AppRole, number> = {
+  viewer: 0,
+  operator: 1,
+  admin: 2,
+  super_admin: 3,
+};
 
 interface DashboardSidebarProps {
   activeTab: DashboardTab;
