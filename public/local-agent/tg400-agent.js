@@ -1784,7 +1784,8 @@ Environment Variables:
   PBX_USERNAME          PBX API username (default: admin)
   PBX_PASSWORD          PBX API password
   SUPABASE_URL          Supabase project URL
-  SUPABASE_ANON_KEY     Supabase anonymous key
+   SUPABASE_ANON_KEY     Supabase anonymous key
+  SUPABASE_SERVICE_ROLE_KEY  Supabase service role key (required for agent_config access)
   POLL_INTERVAL         SMS polling interval in ms (default: 30000)
   CDR_POLL_INTERVAL     CDR polling interval in ms (default: 60000)
   AGENT_ID              Unique agent identifier (auto-generated if not set)
