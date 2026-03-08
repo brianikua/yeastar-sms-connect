@@ -1691,6 +1691,7 @@ class TG400Agent {
     // Sync config from cloud first (including auto-reply settings)
     await this.syncConfigFromCloud();
     await this.syncAutoReplyConfig();
+    await this.syncCallAutoSmsConfig();
 
     // Test connections
     const connections = await this.testConnection();
