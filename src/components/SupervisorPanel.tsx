@@ -328,6 +328,9 @@ export const SupervisorPanel = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Weekly Shift Planner */}
+      <WeeklyShiftPlanner />
     </div>
   );
 };
