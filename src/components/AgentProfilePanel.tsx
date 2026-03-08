@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useAgents, useUpdateAgent, type Agent } from "@/hooks/useAgents";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { UserCog, Eye, EyeOff, KeyRound, Save, Send, Phone, MessageSquare, PhoneIncoming, PhoneOutgoing } from "lucide-react";
+import { UserCog, Eye, EyeOff, KeyRound, Save, Send, Phone, MessageSquare, PhoneIncoming, PhoneOutgoing, Bell, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 const useSimPorts = () =>
