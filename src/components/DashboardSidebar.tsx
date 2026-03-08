@@ -9,6 +9,7 @@ import {
   Menu,
   X,
   Shield,
+  Crown,
 } from "lucide-react";
 import { usePendingSwapCount } from "@/hooks/useShiftSwap";
 import { Button } from "@/components/ui/button";
