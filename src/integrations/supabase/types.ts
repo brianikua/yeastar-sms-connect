@@ -188,6 +188,7 @@ export type Database = {
           name: string
           phone: string | null
           pin: string
+          telegram_chat_id: string | null
           updated_at: string
         }
         Insert: {
@@ -199,6 +200,7 @@ export type Database = {
           name: string
           phone?: string | null
           pin: string
+          telegram_chat_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -210,6 +212,7 @@ export type Database = {
           name?: string
           phone?: string | null
           pin?: string
+          telegram_chat_id?: string | null
           updated_at?: string
         }
         Relationships: []
