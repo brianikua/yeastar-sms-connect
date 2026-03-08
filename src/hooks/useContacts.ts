@@ -23,13 +23,26 @@ export const useContacts = () => {
   const query = useQuery({
     queryKey: ["contacts"],
     queryFn: async (): Promise<Contact[]> => {
-      const { data, error } = await supabase
-        .from("contacts")
-        .select("*")
-        .order("last_seen_at", { ascending: false });
+      // Paginate to avoid hitting the 1000-row default limit
+      const allContacts: Contact[] = [];
+      let from = 0;
+      const pageSize = 1000;
+      
+      while (true) {
+        const { data, error } = await supabase
+          .from("contacts")
+          .select("*")
+          .order("last_seen_at", { ascending: false })
+          .range(from, from + pageSize - 1);
 
-      if (error) throw error;
-      return data || [];
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allContacts.push(...data);
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
+      
+      return allContacts;
     },
   });
 

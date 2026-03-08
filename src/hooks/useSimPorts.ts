@@ -59,22 +59,17 @@ export const useSimPorts = () => {
 
       if (configError) throw configError;
 
-      // Fetch message counts per SIM port
-      const { data: messageCounts, error: countError } = await supabase
-        .from("sms_messages")
-        .select("sim_port");
-
-      if (countError) throw countError;
-
-      // Count messages per port
-      const countsByPort =
-        messageCounts?.reduce(
-          (acc, msg) => {
-            acc[msg.sim_port] = (acc[msg.sim_port] || 0) + 1;
-            return acc;
-          },
-          {} as Record<number, number>
-        ) || {};
+      // Fetch message counts per SIM port efficiently
+      const countsByPort: Record<number, number> = {};
+      for (const config of configs || []) {
+        const { count, error: countError } = await supabase
+          .from("sms_messages")
+          .select("*", { count: "exact", head: true })
+          .eq("sim_port", config.port_number);
+        if (!countError && count !== null) {
+          countsByPort[config.port_number] = count;
+        }
+      }
 
       const ports = (configs || []).map((config) => {
         // Determine status based on enabled state and last_seen_at

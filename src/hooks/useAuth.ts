@@ -82,8 +82,8 @@ export const useAuth = (): AuthState => {
     role,
     isLoading,
     isAuthenticated: !!session?.user,
-    isAdmin: role === "admin",
-    isOperator: role === "operator" || role === "admin",
+    isAdmin: role === "admin" || role === "super_admin",
+    isOperator: role === "operator" || role === "admin" || role === "super_admin",
   };
 };
 
