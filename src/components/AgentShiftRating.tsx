@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Star, StarOff, Award, Loader2 } from "lucide-react";
+import { Star, StarOff, Award, Loader2, Send } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -94,6 +94,17 @@ export const AgentShiftRating = () => {
   const { data: agents = [] } = useAgents();
   const { data: ratings = [], isLoading } = useAgentRatings();
   const submitRating = useSubmitRating();
+  const sendDigest = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("telegram-notify", {
+        body: { action: "weekly_rating_digest" },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => toast.success("Weekly digest sent to Telegram"),
+    onError: (err: Error) => toast.error("Failed to send digest: " + err.message),
+  });
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState("");
@@ -140,12 +151,23 @@ export const AgentShiftRating = () => {
             </CardTitle>
             <CardDescription className="text-xs mt-1">Rate agent performance after their shift</CardDescription>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-1.5">
-                <Star className="w-3.5 h-3.5" /> Rate Agent
-              </Button>
-            </DialogTrigger>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={() => sendDigest.mutate()}
+              disabled={sendDigest.isPending}
+            >
+              {sendDigest.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              Send Weekly Digest
+            </Button>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="gap-1.5">
+                  <Star className="w-3.5 h-3.5" /> Rate Agent
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Rate Agent Shift Performance</DialogTitle>
@@ -213,6 +235,7 @@ export const AgentShiftRating = () => {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
