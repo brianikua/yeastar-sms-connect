@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * TG400 Local Polling Agent v4.2 - Auto-Reply SMS
+ * TG400 Local Polling Agent v4.3 - Call Auto-SMS
  * 
  * Features:
  * - Persistent state file (survives restarts)
@@ -15,6 +15,7 @@
  * - AUTO-UPDATE: Checks for new versions and self-updates
  * - PREDICTIVE MAINTENANCE: AI predicts issues before they happen
  * - AUTO-REPLY SMS: Reads auto_reply_config from cloud and sends reply on each new SMS
+ * - CALL AUTO-SMS: Sends different SMS to callers after answered vs missed calls
  * 
  * Installation: See /local-agent/install.sh
  */
