@@ -215,11 +215,26 @@ serve(async (req) => {
             personalEmailHtml += `<h3>📊 Your Daily Report</h3><table style="border-collapse:collapse;margin:8px 0;"><tr><td style="padding:2px 8px;">📞 Calls</td><td style="padding:2px 8px;">${totalCalls} (${inbound}↙ ${outbound}↗)</td></tr><tr><td style="padding:2px 8px;">✅ Answered</td><td style="padding:2px 8px;">${answered}</td></tr><tr><td style="padding:2px 8px;">❌ Missed</td><td style="padding:2px 8px;">${missed}</td></tr><tr><td style="padding:2px 8px;">📲 Callbacks</td><td style="padding:2px 8px;">${callbacks}</td></tr><tr><td style="padding:2px 8px;">⏱ Talk time</td><td style="padding:2px 8px;">${talkMin}m</td></tr><tr><td style="padding:2px 8px;">💬 SMS</td><td style="padding:2px 8px;">${totalSms}</td></tr></table>`;
           }
 
-          // For clock_out, we already fetched the agent — send directly
-          if (agent?.telegram_chat_id && telegramBotToken) {
-            agentTelegramMessages.push({ chatId: agent.telegram_chat_id, text: personalTelegramMsg });
-          } else if (agent?.email && resendApiKey) {
-            await sendEmail(resendApiKey, [agent.email], `${emoji} Shift Ended – Daily Report`, personalEmailHtml);
+          // For clock_out, we already fetched the agent — send based on preference
+          const clockPref = agent?.notification_channel || "telegram";
+          const clockCanTg = agent?.telegram_chat_id && telegramBotToken;
+          const clockCanEmail = agent?.email && resendApiKey;
+
+          if (clockPref === "both") {
+            if (clockCanTg) agentTelegramMessages.push({ chatId: agent.telegram_chat_id, text: personalTelegramMsg });
+            if (clockCanEmail) await sendEmail(resendApiKey!, [agent.email], `${emoji} Shift Ended – Daily Report`, personalEmailHtml);
+          } else if (clockPref === "telegram") {
+            if (clockCanTg) {
+              agentTelegramMessages.push({ chatId: agent.telegram_chat_id, text: personalTelegramMsg });
+            } else if (clockCanEmail) {
+              await sendEmail(resendApiKey!, [agent.email], `${emoji} Shift Ended – Daily Report`, personalEmailHtml);
+            }
+          } else if (clockPref === "email") {
+            if (clockCanEmail) {
+              await sendEmail(resendApiKey!, [agent.email], `${emoji} Shift Ended – Daily Report`, personalEmailHtml);
+            } else if (clockCanTg) {
+              agentTelegramMessages.push({ chatId: agent.telegram_chat_id, text: personalTelegramMsg });
+            }
           }
         } else {
           // clock_in — use the unified notification system
