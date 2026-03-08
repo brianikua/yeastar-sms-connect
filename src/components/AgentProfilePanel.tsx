@@ -350,7 +350,6 @@ export const AgentProfilePanel = () => {
                   {form.notification_channel === "both" && "Notifications via both Telegram and email"}
                 </p>
               </div>
-              </div>
               <Button onClick={handleSave} disabled={updateAgent.isPending} className="w-full">
                 <Save className="w-4 h-4 mr-2" /> Save Changes
               </Button>
