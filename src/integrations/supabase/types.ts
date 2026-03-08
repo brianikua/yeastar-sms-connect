@@ -600,6 +600,77 @@ export type Database = {
           },
         ]
       }
+      shift_swap_requests: {
+        Row: {
+          created_at: string
+          id: string
+          reason: string
+          requester_agent_id: string
+          requester_shift_id: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          target_agent_id: string
+          target_shift_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reason: string
+          requester_agent_id: string
+          requester_shift_id: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_agent_id: string
+          target_shift_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reason?: string
+          requester_agent_id?: string
+          requester_shift_id?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_agent_id?: string
+          target_shift_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_swap_requests_requester_agent_id_fkey"
+            columns: ["requester_agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_swap_requests_requester_shift_id_fkey"
+            columns: ["requester_shift_id"]
+            isOneToOne: false
+            referencedRelation: "shift_schedule"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_swap_requests_target_agent_id_fkey"
+            columns: ["target_agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_swap_requests_target_shift_id_fkey"
+            columns: ["target_shift_id"]
+            isOneToOne: false
+            referencedRelation: "shift_schedule"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sim_port_config: {
         Row: {
           carrier: string | null

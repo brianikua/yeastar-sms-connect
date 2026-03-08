@@ -24,40 +24,54 @@ serve(async (req) => {
     let emailTo: string[] = [];
 
     if (action === "reassign") {
-      const {
-        original_agent_name,
-        original_agent_email,
-        new_agent_name,
-        new_agent_email,
-        shift_date,
-        start_time,
-        end_time,
-        reason,
-      } = body;
+      const { original_agent_name, original_agent_email, new_agent_name, new_agent_email, shift_date, start_time, end_time, reason } = body;
 
-      telegramMessage = [
-        `🔄 *Shift Reassignment*`,
-        ``,
-        `📅 ${shift_date} · ${start_time}–${end_time}`,
-        `❌ *${original_agent_name}* → ✅ *${new_agent_name}*`,
-        `📝 Reason: _${reason}_`,
-      ].join("\n");
-
+      telegramMessage = `🔄 *Shift Reassignment*\n\n📅 ${shift_date} · ${start_time}–${end_time}\n❌ *${original_agent_name}* → ✅ *${new_agent_name}*\n📝 Reason: _${reason}_`;
       emailSubject = `🔄 Shift Reassigned – ${shift_date} ${start_time}–${end_time}`;
-      emailHtml = `
-        <h2>🔄 Shift Reassignment</h2>
+      emailHtml = `<h2>🔄 Shift Reassignment</h2>
         <table style="border-collapse:collapse;margin:16px 0;">
           <tr><td style="padding:4px 12px;font-weight:bold;">Date</td><td style="padding:4px 12px;">${shift_date}</td></tr>
           <tr><td style="padding:4px 12px;font-weight:bold;">Time</td><td style="padding:4px 12px;">${start_time} – ${end_time}</td></tr>
           <tr><td style="padding:4px 12px;font-weight:bold;">Removed</td><td style="padding:4px 12px;">${original_agent_name}</td></tr>
           <tr><td style="padding:4px 12px;font-weight:bold;">Assigned To</td><td style="padding:4px 12px;">${new_agent_name}</td></tr>
           <tr><td style="padding:4px 12px;font-weight:bold;">Reason</td><td style="padding:4px 12px;">${reason}</td></tr>
-        </table>
-      `;
-
-      // Notify both agents
+        </table>`;
       if (original_agent_email) emailTo.push(original_agent_email);
       if (new_agent_email) emailTo.push(new_agent_email);
+
+    } else if (action === "swap_request") {
+      const { requester_name, target_name, requester_shift_date, requester_shift_time, target_shift_date, target_shift_time, reason } = body;
+
+      telegramMessage = `🔀 *Shift Swap Request*\n\n*${requester_name}* wants to swap with *${target_name}*\n\n📅 ${requester_name}: ${requester_shift_date} ${requester_shift_time}\n📅 ${target_name}: ${target_shift_date} ${target_shift_time}\n📝 Reason: _${reason}_\n\n⏳ Pending supervisor approval`;
+      // No email for request — just telegram alert to supervisor
+
+    } else if (action === "swap_approved") {
+      const { requester_name, requester_email, target_name, target_email, requester_shift_date, requester_shift_time, target_shift_date, target_shift_time, reason } = body;
+
+      telegramMessage = `✅ *Shift Swap Approved*\n\n*${requester_name}* ↔ *${target_name}*\n\n📅 ${requester_name} now works: ${target_shift_date} ${target_shift_time}\n📅 ${target_name} now works: ${requester_shift_date} ${requester_shift_time}\n📝 Reason: _${reason}_`;
+      emailSubject = `✅ Shift Swap Approved`;
+      emailHtml = `<h2>✅ Shift Swap Approved</h2>
+        <p>The shift swap between <strong>${requester_name}</strong> and <strong>${target_name}</strong> has been approved.</p>
+        <table style="border-collapse:collapse;margin:16px 0;">
+          <tr><td style="padding:4px 12px;font-weight:bold;">${requester_name}</td><td style="padding:4px 12px;">Now works ${target_shift_date} ${target_shift_time}</td></tr>
+          <tr><td style="padding:4px 12px;font-weight:bold;">${target_name}</td><td style="padding:4px 12px;">Now works ${requester_shift_date} ${requester_shift_time}</td></tr>
+          <tr><td style="padding:4px 12px;font-weight:bold;">Reason</td><td style="padding:4px 12px;">${reason}</td></tr>
+        </table>`;
+      if (requester_email) emailTo.push(requester_email);
+      if (target_email) emailTo.push(target_email);
+
+    } else if (action === "swap_rejected") {
+      const { requester_name, requester_email, target_name, target_email, reason, review_note } = body;
+
+      telegramMessage = `❌ *Shift Swap Rejected*\n\n*${requester_name}* ↔ *${target_name}*\n📝 Reason: _${reason}_${review_note ? `\n💬 Supervisor note: _${review_note}_` : ""}`;
+      emailSubject = `❌ Shift Swap Rejected`;
+      emailHtml = `<h2>❌ Shift Swap Rejected</h2>
+        <p>The shift swap request between <strong>${requester_name}</strong> and <strong>${target_name}</strong> has been rejected.</p>
+        <p><strong>Original reason:</strong> ${reason}</p>
+        ${review_note ? `<p><strong>Supervisor note:</strong> ${review_note}</p>` : ""}`;
+      if (requester_email) emailTo.push(requester_email);
+      if (target_email) emailTo.push(target_email);
+
     } else {
       // Original clock in/out logic
       const { agent_name, agent_email, clock_time } = body;
@@ -67,10 +81,8 @@ serve(async (req) => {
 
       telegramMessage = `${emoji} *Agent Shift Update*\n\n*${agent_name}* has ${verb}\n🕐 ${formattedTime}`;
       emailSubject = `Shift ${action === "clock_in" ? "Started" : "Ended"} - ${agent_name}`;
-      emailHtml = `
-        <h2>${emoji} Shift ${action === "clock_in" ? "Started" : "Ended"}</h2>
-        <p><strong>${agent_name}</strong> has ${verb} at <strong>${formattedTime}</strong></p>
-      `;
+      emailHtml = `<h2>${emoji} Shift ${action === "clock_in" ? "Started" : "Ended"}</h2>
+        <p><strong>${agent_name}</strong> has ${verb} at <strong>${formattedTime}</strong></p>`;
       if (agent_email) emailTo.push(agent_email);
     }
 
