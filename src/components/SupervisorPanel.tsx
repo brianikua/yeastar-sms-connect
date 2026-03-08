@@ -40,16 +40,16 @@ export const SupervisorPanel = () => {
   const createAgent = useCreateAgent();
   const createSchedule = useCreateSchedule();
 
-  const [newAgent, setNewAgent] = useState({ name: "", pin: "", email: "", phone: "", extension: "" });
+  const [newAgent, setNewAgent] = useState({ name: "", email: "", phone: "", extension: "", telegram_chat_id: "" });
   const [newSchedule, setNewSchedule] = useState({ agent_id: "", shift_date: "", start_time: "08:00", end_time: "17:00", notes: "" });
   const [agentDialogOpen, setAgentDialogOpen] = useState(false);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
 
   const handleCreateAgent = () => {
-    if (!newAgent.name || !newAgent.pin) return;
+    if (!newAgent.name) return;
     createAgent.mutate(
-      { name: newAgent.name, pin: newAgent.pin, email: newAgent.email || undefined, phone: newAgent.phone || undefined, extension: newAgent.extension || undefined },
-      { onSuccess: () => { setNewAgent({ name: "", pin: "", email: "", phone: "", extension: "" }); setAgentDialogOpen(false); } }
+      { name: newAgent.name, email: newAgent.email || undefined, phone: newAgent.phone || undefined, extension: newAgent.extension || undefined, telegram_chat_id: newAgent.telegram_chat_id || undefined },
+      { onSuccess: () => { setNewAgent({ name: "", email: "", phone: "", extension: "", telegram_chat_id: "" }); setAgentDialogOpen(false); } }
     );
   };
 
