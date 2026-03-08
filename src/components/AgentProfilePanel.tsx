@@ -5,11 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAgents, useUpdateAgent, type Agent } from "@/hooks/useAgents";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { UserCog, Eye, EyeOff, KeyRound, Save, Send, Phone, MessageSquare, PhoneIncoming, PhoneOutgoing } from "lucide-react";
+import { UserCog, Eye, EyeOff, KeyRound, Save, Send, Phone, MessageSquare, PhoneIncoming, PhoneOutgoing, Bell, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 const useSimPorts = () =>
@@ -84,6 +85,7 @@ export const AgentProfilePanel = () => {
     phone: "",
     extension: "",
     telegram_chat_id: "",
+    notification_channel: "telegram" as "telegram" | "email" | "both",
   });
 
   const { data: extStats } = useAgentExtensionStats(
@@ -132,6 +134,7 @@ export const AgentProfilePanel = () => {
       phone: agent.phone || "",
       extension: agent.extension || "",
       telegram_chat_id: agent.telegram_chat_id || "",
+      notification_channel: agent.notification_channel || "telegram",
     });
     setShowPin(false);
     setDialogOpen(true);
@@ -145,6 +148,7 @@ export const AgentProfilePanel = () => {
     if (form.phone !== (selectedAgent.phone || "")) updates.phone = form.phone || undefined;
     if (form.extension !== (selectedAgent.extension || "")) updates.extension = form.extension || undefined;
     if (form.telegram_chat_id !== (selectedAgent.telegram_chat_id || "")) updates.telegram_chat_id = form.telegram_chat_id || undefined;
+    if (form.notification_channel !== (selectedAgent.notification_channel || "telegram")) updates.notification_channel = form.notification_channel;
 
     if (Object.keys(updates).length === 0) {
       toast.info("No changes to save");
@@ -313,6 +317,38 @@ export const AgentProfilePanel = () => {
                   placeholder="Agent's personal Telegram chat ID"
                 />
                 <p className="text-xs text-muted-foreground mt-1">Agent will receive shift & performance notifications on Telegram</p>
+              </div>
+              <div>
+                <Label className="flex items-center gap-1"><Bell className="w-3 h-3" /> Notification Preference</Label>
+                <RadioGroup
+                  value={form.notification_channel}
+                  onValueChange={(val) => setForm({ ...form, notification_channel: val as "telegram" | "email" | "both" })}
+                  className="flex gap-4 mt-2"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <RadioGroupItem value="telegram" id={`notif-tg-${selectedAgent?.id}`} />
+                    <Label htmlFor={`notif-tg-${selectedAgent?.id}`} className="text-sm font-normal flex items-center gap-1 cursor-pointer">
+                      <Send className="w-3 h-3" /> Telegram
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <RadioGroupItem value="email" id={`notif-email-${selectedAgent?.id}`} />
+                    <Label htmlFor={`notif-email-${selectedAgent?.id}`} className="text-sm font-normal flex items-center gap-1 cursor-pointer">
+                      <Mail className="w-3 h-3" /> Email
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <RadioGroupItem value="both" id={`notif-both-${selectedAgent?.id}`} />
+                    <Label htmlFor={`notif-both-${selectedAgent?.id}`} className="text-sm font-normal flex items-center gap-1 cursor-pointer">
+                      <Bell className="w-3 h-3" /> Both
+                    </Label>
+                  </div>
+                </RadioGroup>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {form.notification_channel === "telegram" && "Notifications via Telegram only (email used as fallback if no chat ID)"}
+                  {form.notification_channel === "email" && "Notifications via email only"}
+                  {form.notification_channel === "both" && "Notifications via both Telegram and email"}
+                </p>
               </div>
               <Button onClick={handleSave} disabled={updateAgent.isPending} className="w-full">
                 <Save className="w-4 h-4 mr-2" /> Save Changes

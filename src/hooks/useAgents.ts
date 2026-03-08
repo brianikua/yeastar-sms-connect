@@ -10,6 +10,7 @@ export interface Agent {
   phone: string | null;
   extension: string | null;
   telegram_chat_id: string | null;
+  notification_channel: "telegram" | "email" | "both";
   is_active: boolean;
   created_at: string;
 }
@@ -167,6 +168,7 @@ export const useClockIn = () => {
         extension: agentResult.extension,
         telegram_chat_id: agentResult.telegram_chat_id,
         pin: "", // Not exposed by RPC
+        notification_channel: "telegram",
         is_active: true,
         created_at: "",
       };

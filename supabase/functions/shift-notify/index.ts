@@ -181,7 +181,7 @@ serve(async (req) => {
 
         // On clock out, include a daily summary
         if (action === "clock_out") {
-          const { data: agent } = await supabase.from("agents").select("telegram_chat_id, email, extension").eq("id", agent_id).maybeSingle();
+          const { data: agent } = await supabase.from("agents").select("telegram_chat_id, email, extension, notification_channel").eq("id", agent_id).maybeSingle();
           if (agent?.extension) {
             const today = new Date().toISOString().split("T")[0];
             const { data: calls } = await supabase
@@ -215,11 +215,26 @@ serve(async (req) => {
             personalEmailHtml += `<h3>📊 Your Daily Report</h3><table style="border-collapse:collapse;margin:8px 0;"><tr><td style="padding:2px 8px;">📞 Calls</td><td style="padding:2px 8px;">${totalCalls} (${inbound}↙ ${outbound}↗)</td></tr><tr><td style="padding:2px 8px;">✅ Answered</td><td style="padding:2px 8px;">${answered}</td></tr><tr><td style="padding:2px 8px;">❌ Missed</td><td style="padding:2px 8px;">${missed}</td></tr><tr><td style="padding:2px 8px;">📲 Callbacks</td><td style="padding:2px 8px;">${callbacks}</td></tr><tr><td style="padding:2px 8px;">⏱ Talk time</td><td style="padding:2px 8px;">${talkMin}m</td></tr><tr><td style="padding:2px 8px;">💬 SMS</td><td style="padding:2px 8px;">${totalSms}</td></tr></table>`;
           }
 
-          // For clock_out, we already fetched the agent — send directly
-          if (agent?.telegram_chat_id && telegramBotToken) {
-            agentTelegramMessages.push({ chatId: agent.telegram_chat_id, text: personalTelegramMsg });
-          } else if (agent?.email && resendApiKey) {
-            await sendEmail(resendApiKey, [agent.email], `${emoji} Shift Ended – Daily Report`, personalEmailHtml);
+          // For clock_out, we already fetched the agent — send based on preference
+          const clockPref = agent?.notification_channel || "telegram";
+          const clockCanTg = agent?.telegram_chat_id && telegramBotToken;
+          const clockCanEmail = agent?.email && resendApiKey;
+
+          if (clockPref === "both") {
+            if (clockCanTg) agentTelegramMessages.push({ chatId: agent.telegram_chat_id, text: personalTelegramMsg });
+            if (clockCanEmail) await sendEmail(resendApiKey!, [agent.email], `${emoji} Shift Ended – Daily Report`, personalEmailHtml);
+          } else if (clockPref === "telegram") {
+            if (clockCanTg) {
+              agentTelegramMessages.push({ chatId: agent.telegram_chat_id, text: personalTelegramMsg });
+            } else if (clockCanEmail) {
+              await sendEmail(resendApiKey!, [agent.email], `${emoji} Shift Ended – Daily Report`, personalEmailHtml);
+            }
+          } else if (clockPref === "email") {
+            if (clockCanEmail) {
+              await sendEmail(resendApiKey!, [agent.email], `${emoji} Shift Ended – Daily Report`, personalEmailHtml);
+            } else if (clockCanTg) {
+              agentTelegramMessages.push({ chatId: agent.telegram_chat_id, text: personalTelegramMsg });
+            }
           }
         } else {
           // clock_in — use the unified notification system
@@ -277,10 +292,25 @@ serve(async (req) => {
 
         const emailBody = `<h2>📊 Daily Report — ${agent.name}</h2><p>📅 ${today}</p><table style="border-collapse:collapse;margin:8px 0;"><tr><td style="padding:2px 8px;">⏰ Shift time</td><td style="padding:2px 8px;">${Math.floor(shiftTime / 60)}h ${Math.round(shiftTime % 60)}m</td></tr><tr><td style="padding:2px 8px;">📞 Calls</td><td style="padding:2px 8px;">${totalCalls} (${inbound}↙ ${outbound}↗)</td></tr><tr><td style="padding:2px 8px;">✅ Answered</td><td style="padding:2px 8px;">${answered}</td></tr><tr><td style="padding:2px 8px;">❌ Missed</td><td style="padding:2px 8px;">${missed}</td></tr><tr><td style="padding:2px 8px;">⏱ Talk time</td><td style="padding:2px 8px;">${talkH}h ${talkM}m</td></tr></table>${missed > 0 ? `<p>⚠️ You have ${missed} missed call${missed > 1 ? "s" : ""} — please follow up!</p>` : "<p>✨ Great job — no missed calls!</p>"}`;
 
-        if (agent.telegram_chat_id && telegramBotToken) {
-          agentTelegramMessages.push({ chatId: agent.telegram_chat_id, text: telegramMsg });
-        } else if (agent.email && resendApiKey) {
-          await sendEmail(resendApiKey, [agent.email], `📊 Daily Report — ${agent.name}`, emailBody);
+        const pref = agent.notification_channel || "telegram";
+        const canTelegram = agent.telegram_chat_id && telegramBotToken;
+        const canEmail = agent.email && resendApiKey;
+
+        if (pref === "both") {
+          if (canTelegram) agentTelegramMessages.push({ chatId: agent.telegram_chat_id, text: telegramMsg });
+          if (canEmail) await sendEmail(resendApiKey!, [agent.email], `📊 Daily Report — ${agent.name}`, emailBody);
+        } else if (pref === "telegram") {
+          if (canTelegram) {
+            agentTelegramMessages.push({ chatId: agent.telegram_chat_id, text: telegramMsg });
+          } else if (canEmail) {
+            await sendEmail(resendApiKey!, [agent.email], `📊 Daily Report — ${agent.name}`, emailBody);
+          }
+        } else if (pref === "email") {
+          if (canEmail) {
+            await sendEmail(resendApiKey!, [agent.email], `📊 Daily Report — ${agent.name}`, emailBody);
+          } else if (canTelegram) {
+            agentTelegramMessages.push({ chatId: agent.telegram_chat_id, text: telegramMsg });
+          }
         }
       }
       telegramMessage = `📊 Daily agent reports sent to ${(agents || []).length} agents`;
@@ -298,13 +328,14 @@ serve(async (req) => {
       );
     }
 
-    // Process unified agent notifications: Telegram if available, email fallback
+    // Process unified agent notifications: respect notification_channel preference
     let emailFallbackCount = 0;
+    let telegramSentCount = 0;
     if (agentNotifications.length > 0) {
       const agentIds = [...new Set(agentNotifications.map((n) => n.agentId))];
       const { data: agentsData } = await supabase
         .from("agents")
-        .select("id, telegram_chat_id, email")
+        .select("id, telegram_chat_id, email, notification_channel")
         .in("id", agentIds);
 
       const agentMap = new Map((agentsData || []).map((a: any) => [a.id, a]));
@@ -313,13 +344,37 @@ serve(async (req) => {
         const agent = agentMap.get(notification.agentId);
         if (!agent) continue;
 
-        if (agent.telegram_chat_id && telegramBotToken) {
-          // Send via Telegram
-          await sendTelegram(telegramBotToken, agent.telegram_chat_id, notification.telegramText);
-        } else if (agent.email && resendApiKey) {
-          // Fallback to email
-          await sendEmail(resendApiKey, [agent.email], notification.emailSubject, notification.emailHtml);
-          emailFallbackCount++;
+        const pref = agent.notification_channel || "telegram";
+        const canTelegram = agent.telegram_chat_id && telegramBotToken;
+        const canEmail = agent.email && resendApiKey;
+
+        if (pref === "both") {
+          if (canTelegram) {
+            await sendTelegram(telegramBotToken!, agent.telegram_chat_id, notification.telegramText);
+            telegramSentCount++;
+          }
+          if (canEmail) {
+            await sendEmail(resendApiKey!, [agent.email], notification.emailSubject, notification.emailHtml);
+            emailFallbackCount++;
+          }
+        } else if (pref === "telegram") {
+          if (canTelegram) {
+            await sendTelegram(telegramBotToken!, agent.telegram_chat_id, notification.telegramText);
+            telegramSentCount++;
+          } else if (canEmail) {
+            // Fallback to email if Telegram not configured
+            await sendEmail(resendApiKey!, [agent.email], notification.emailSubject, notification.emailHtml);
+            emailFallbackCount++;
+          }
+        } else if (pref === "email") {
+          if (canEmail) {
+            await sendEmail(resendApiKey!, [agent.email], notification.emailSubject, notification.emailHtml);
+            emailFallbackCount++;
+          } else if (canTelegram) {
+            // Fallback to Telegram if email not configured
+            await sendTelegram(telegramBotToken!, agent.telegram_chat_id, notification.telegramText);
+            telegramSentCount++;
+          }
         }
       }
     }

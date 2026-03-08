@@ -224,6 +224,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          notification_channel: string
           phone: string | null
           pin: string
           telegram_chat_id: string | null
@@ -236,6 +237,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          notification_channel?: string
           phone?: string | null
           pin: string
           telegram_chat_id?: string | null
@@ -248,6 +250,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          notification_channel?: string
           phone?: string | null
           pin?: string
           telegram_chat_id?: string | null
