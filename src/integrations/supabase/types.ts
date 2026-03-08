@@ -823,7 +823,7 @@ export type Database = {
       merge_duplicate_contacts: { Args: never; Returns: Json }
     }
     Enums: {
-      app_role: "admin" | "operator" | "viewer"
+      app_role: "super_admin" | "admin" | "operator" | "viewer"
       call_direction: "inbound" | "outbound" | "internal"
       call_status: "answered" | "missed" | "busy" | "failed" | "voicemail"
       log_severity: "info" | "warning" | "error" | "success"
@@ -963,7 +963,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "operator", "viewer"],
+      app_role: ["super_admin", "admin", "operator", "viewer"],
       call_direction: ["inbound", "outbound", "internal"],
       call_status: ["answered", "missed", "busy", "failed", "voicemail"],
       log_severity: ["info", "warning", "error", "success"],
