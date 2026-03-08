@@ -124,6 +124,12 @@ export const DashboardSidebar = ({ activeTab, onTabChange }: DashboardSidebarPro
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { data: currentRole } = useCurrentUserRole();
+
+  const visibleItems = useMemo(() => {
+    const level = ROLE_LEVEL[currentRole || "viewer"];
+    return navItems.filter(item => level >= ROLE_LEVEL[item.minRole]);
+  }, [currentRole]);
 
   // Close mobile drawer on resize to desktop
   useEffect(() => {
