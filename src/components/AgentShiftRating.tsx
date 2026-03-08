@@ -128,7 +128,7 @@ export const AgentShiftRating = () => {
     );
   };
 
-  // Compute average ratings per agent
+  // Compute average ratings per agent (all time)
   const agentAvgMap = new Map<string, { avg: number; count: number }>();
   ratings.forEach((r) => {
     const entry = agentAvgMap.get(r.agent_id) || { avg: 0, count: 0 };
@@ -139,8 +139,43 @@ export const AgentShiftRating = () => {
 
   const agentMap = new Map(agents.map((a) => [a.id, a]));
 
+  // Leaderboard: last 30 days
+  const thirtyDaysAgo = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().split("T")[0];
+  }, []);
+
+  const leaderboard = useMemo(() => {
+    const recent = ratings.filter((r) => r.rating_date >= thirtyDaysAgo);
+    const map = new Map<string, { total: number; count: number; best: number; worst: number }>();
+    recent.forEach((r) => {
+      const entry = map.get(r.agent_id) || { total: 0, count: 0, best: 0, worst: 6 };
+      entry.total += r.rating;
+      entry.count += 1;
+      entry.best = Math.max(entry.best, r.rating);
+      entry.worst = Math.min(entry.worst, r.rating);
+      map.set(r.agent_id, entry);
+    });
+    return Array.from(map.entries())
+      .map(([id, s]) => ({
+        agent: agentMap.get(id),
+        avg: s.total / s.count,
+        count: s.count,
+        best: s.best,
+        worst: s.worst === 6 ? 0 : s.worst,
+      }))
+      .filter((e) => e.agent)
+      .sort((a, b) => b.avg - a.avg || b.count - a.count);
+  }, [ratings, thirtyDaysAgo, agentMap]);
+
+  const maxCount = Math.max(...leaderboard.map((l) => l.count), 1);
+  const medals = ["🥇", "🥈", "🥉"];
+
   // Recent ratings with agent names
   const recentRatings = ratings.slice(0, 10);
+
+  const [activeTab, setActiveTab] = useState("overview");
 
   return (
     <Card>
