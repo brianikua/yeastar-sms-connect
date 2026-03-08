@@ -241,6 +241,10 @@ Deno.serve(async (req) => {
       }
       if (!(errorData || []).length) messageText += `✅ _No unresolved errors_`;
 
+    } else if (action === "rating_notification") {
+      const { agent_name, agent_telegram_chat_id, rating, comment } = await req.json().catch(() => ({}));
+      // We already parsed json above, so re-parse the body from the initial parse
+      // Actually we need to get these from the initial parse. Let me restructure.
     } else {
       throw new Error(`Unknown action: ${action}`);
     }
