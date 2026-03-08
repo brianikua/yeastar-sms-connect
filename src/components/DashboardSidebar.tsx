@@ -61,7 +61,7 @@ const NavItems = ({
     <nav className="flex-1 flex flex-col gap-1 px-2">
       {navItems.map((item) => {
         const isActive = activeTab === item.id;
-        const badge = item.id === "supervisor" && pendingCount > 0 ? pendingCount : 0;
+        const badge = item.id === "staff" && pendingCount > 0 ? pendingCount : 0;
         const button = (
           <button
             key={item.id}
