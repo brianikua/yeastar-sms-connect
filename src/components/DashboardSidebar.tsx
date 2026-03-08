@@ -29,7 +29,9 @@ export type DashboardTab =
   | "ai"
   | "telegram"
   | "contacts"
-  | "reports";
+  | "reports"
+  | "kiosk"
+  | "supervisor";
 
 interface NavItem {
   id: DashboardTab;
