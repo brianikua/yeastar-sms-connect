@@ -46,6 +46,8 @@ const navItems: NavItem[] = [
   { id: "calls", label: "Calls", icon: PhoneCall },
   { id: "reports", label: "Reports", icon: ClipboardList },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
+  { id: "kiosk", label: "Clock In/Out", icon: Clock },
+  { id: "supervisor", label: "Supervisor", icon: Shield },
   { id: "logs", label: "Logs", icon: FileText },
   { id: "contacts", label: "Contacts", icon: Users },
   { id: "telegram", label: "Telegram", icon: Send },
