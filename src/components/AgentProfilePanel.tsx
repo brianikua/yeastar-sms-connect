@@ -134,6 +134,7 @@ export const AgentProfilePanel = () => {
       phone: agent.phone || "",
       extension: agent.extension || "",
       telegram_chat_id: agent.telegram_chat_id || "",
+      notification_channel: agent.notification_channel || "telegram",
     });
     setShowPin(false);
     setDialogOpen(true);
