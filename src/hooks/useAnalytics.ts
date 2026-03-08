@@ -80,6 +80,8 @@ export const useAnalytics = (days: number = 7) => {
           missedCalls: 0,
           calledBack: 0,
           smsCount: 0,
+          totalTalkTime: 0,
+          avgTalkTime: 0,
         });
       });
 
