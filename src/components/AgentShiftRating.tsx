@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Star, StarOff, Award, Loader2, Send } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -126,7 +128,7 @@ export const AgentShiftRating = () => {
     );
   };
 
-  // Compute average ratings per agent
+  // Compute average ratings per agent (all time)
   const agentAvgMap = new Map<string, { avg: number; count: number }>();
   ratings.forEach((r) => {
     const entry = agentAvgMap.get(r.agent_id) || { avg: 0, count: 0 };
@@ -137,8 +139,43 @@ export const AgentShiftRating = () => {
 
   const agentMap = new Map(agents.map((a) => [a.id, a]));
 
+  // Leaderboard: last 30 days
+  const thirtyDaysAgo = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().split("T")[0];
+  }, []);
+
+  const leaderboard = useMemo(() => {
+    const recent = ratings.filter((r) => r.rating_date >= thirtyDaysAgo);
+    const map = new Map<string, { total: number; count: number; best: number; worst: number }>();
+    recent.forEach((r) => {
+      const entry = map.get(r.agent_id) || { total: 0, count: 0, best: 0, worst: 6 };
+      entry.total += r.rating;
+      entry.count += 1;
+      entry.best = Math.max(entry.best, r.rating);
+      entry.worst = Math.min(entry.worst, r.rating);
+      map.set(r.agent_id, entry);
+    });
+    return Array.from(map.entries())
+      .map(([id, s]) => ({
+        agent: agentMap.get(id),
+        avg: s.total / s.count,
+        count: s.count,
+        best: s.best,
+        worst: s.worst === 6 ? 0 : s.worst,
+      }))
+      .filter((e) => e.agent)
+      .sort((a, b) => b.avg - a.avg || b.count - a.count);
+  }, [ratings, thirtyDaysAgo, agentMap]);
+
+  const maxCount = Math.max(...leaderboard.map((l) => l.count), 1);
+  const medals = ["🥇", "🥈", "🥉"];
+
   // Recent ratings with agent names
   const recentRatings = ratings.slice(0, 10);
+
+  const [activeTab, setActiveTab] = useState("overview");
 
   return (
     <Card>
@@ -239,74 +276,136 @@ export const AgentShiftRating = () => {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Average Ratings Summary */}
-        {agents.length > 0 && (
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {agents
-              .map((a) => ({ agent: a, stats: agentAvgMap.get(a.id) }))
-              .sort((a, b) => (b.stats?.avg || 0) - (a.stats?.avg || 0))
-              .map(({ agent, stats }) => (
-                <div key={agent.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30 border border-border/30">
-                  <div>
-                    <div className="text-sm font-medium">{agent.name}</div>
-                    {agent.extension && <div className="text-[10px] text-muted-foreground">Ext {agent.extension}</div>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {stats ? (
-                      <>
-                        <StarRating value={Math.round(stats.avg)} readonly />
-                        <span className="text-xs text-muted-foreground">({stats.count})</span>
-                      </>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">No ratings</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-          </div>
-        )}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
+            <TabsTrigger value="recent">Recent</TabsTrigger>
+          </TabsList>
 
-        {/* Recent Ratings Table */}
-        {isLoading ? (
-          <div className="flex justify-center py-4">
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : recentRatings.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Agent</TableHead>
-                <TableHead>Rating</TableHead>
-                <TableHead>Comment</TableHead>
-                <TableHead className="text-right">Date</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {recentRatings.map((r) => {
-                const agent = agentMap.get(r.agent_id);
-                return (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium text-sm">{agent?.name || "Unknown"}</TableCell>
-                    <TableCell>
-                      <StarRating value={r.rating} readonly />
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
-                      {r.comment || "—"}
-                    </TableCell>
-                    <TableCell className="text-right text-xs text-muted-foreground">
-                      {format(new Date(r.rating_date), "dd MMM")}
-                    </TableCell>
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="mt-3">
+            {agents.length > 0 && (
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {agents
+                  .map((a) => ({ agent: a, stats: agentAvgMap.get(a.id) }))
+                  .sort((a, b) => (b.stats?.avg || 0) - (a.stats?.avg || 0))
+                  .map(({ agent, stats }) => (
+                    <div key={agent.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30 border border-border/30">
+                      <div>
+                        <div className="text-sm font-medium">{agent.name}</div>
+                        {agent.extension && <div className="text-[10px] text-muted-foreground">Ext {agent.extension}</div>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {stats ? (
+                          <>
+                            <StarRating value={Math.round(stats.avg)} readonly />
+                            <span className="text-xs text-muted-foreground">({stats.count})</span>
+                          </>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No ratings</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Leaderboard Tab - Last 30 days */}
+          <TabsContent value="leaderboard" className="mt-3">
+            {leaderboard.length > 0 ? (
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">Rankings based on ratings from the last 30 days</p>
+                {leaderboard.map((entry, idx) => (
+                  <div
+                    key={entry.agent!.id}
+                    className={`p-3 rounded-lg border transition-all ${
+                      idx === 0
+                        ? "border-primary/40 bg-primary/5"
+                        : idx < 3
+                        ? "border-border/50 bg-muted/20"
+                        : "border-border/30 bg-muted/10"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-lg w-7 text-center">{medals[idx] || `#${idx + 1}`}</span>
+                        <div>
+                          <div className="text-sm font-semibold">{entry.agent!.name}</div>
+                          {entry.agent!.extension && (
+                            <div className="text-[10px] text-muted-foreground">Ext {entry.agent!.extension}</div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <StarRating value={Math.round(entry.avg)} readonly />
+                        <span className="text-sm font-bold tabular-nums">{entry.avg.toFixed(1)}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Progress value={(entry.count / maxCount) * 100} className="h-1.5 flex-1" />
+                      <div className="flex gap-3 text-[10px] text-muted-foreground shrink-0">
+                        <span>{entry.count} review{entry.count !== 1 ? "s" : ""}</span>
+                        <span>Best: {entry.best}★</span>
+                        <span>Low: {entry.worst}★</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-sm text-muted-foreground">
+                <Award className="w-8 h-8 mx-auto mb-2 text-muted-foreground/30" />
+                No ratings in the last 30 days.
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Recent Ratings Tab */}
+          <TabsContent value="recent" className="mt-3">
+            {isLoading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : recentRatings.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Agent</TableHead>
+                    <TableHead>Rating</TableHead>
+                    <TableHead>Comment</TableHead>
+                    <TableHead className="text-right">Date</TableHead>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="text-center py-6 text-sm text-muted-foreground">
-            <StarOff className="w-8 h-8 mx-auto mb-2 text-muted-foreground/30" />
-            No ratings yet. Rate an agent after their shift.
-          </div>
-        )}
+                </TableHeader>
+                <TableBody>
+                  {recentRatings.map((r) => {
+                    const agent = agentMap.get(r.agent_id);
+                    return (
+                      <TableRow key={r.id}>
+                        <TableCell className="font-medium text-sm">{agent?.name || "Unknown"}</TableCell>
+                        <TableCell>
+                          <StarRating value={r.rating} readonly />
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
+                          {r.comment || "—"}
+                        </TableCell>
+                        <TableCell className="text-right text-xs text-muted-foreground">
+                          {format(new Date(r.rating_date), "dd MMM")}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-6 text-sm text-muted-foreground">
+                <StarOff className="w-8 h-8 mx-auto mb-2 text-muted-foreground/30" />
+                No ratings yet. Rate an agent after their shift.
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );
