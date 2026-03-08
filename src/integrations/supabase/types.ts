@@ -113,6 +113,44 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_ratings: {
+        Row: {
+          agent_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          rated_by: string
+          rating: number
+          rating_date: string
+        }
+        Insert: {
+          agent_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rated_by: string
+          rating: number
+          rating_date?: string
+        }
+        Update: {
+          agent_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rated_by?: string
+          rating?: number
+          rating_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_ratings_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_shifts: {
         Row: {
           agent_id: string
