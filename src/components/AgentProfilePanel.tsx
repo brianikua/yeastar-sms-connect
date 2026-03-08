@@ -85,6 +85,7 @@ export const AgentProfilePanel = () => {
     phone: "",
     extension: "",
     telegram_chat_id: "",
+    notification_channel: "telegram" as "telegram" | "email" | "both",
   });
 
   const { data: extStats } = useAgentExtensionStats(
