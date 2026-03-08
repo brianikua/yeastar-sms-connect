@@ -77,22 +77,21 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Authenticate: require service role key or valid JWT
+    // Authenticate: require service role key only (called from DB triggers)
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     const token = authHeader.replace("Bearer ", "");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    
     if (token !== serviceRoleKey) {
-      // Called from DB trigger with anon key - validate it's a valid JWT
+      // For non-service-role calls, validate JWT
       const anonClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
         global: { headers: { Authorization: authHeader } },
       });
-      const { data, error: claimsError } = await anonClient.auth.getUser();
-      // Allow anon key calls from DB triggers (no user) only if token matches anon key
-      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-      if (claimsError && token !== anonKey) {
+      const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+      if (claimsError || !claimsData?.claims) {
         return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
     }
