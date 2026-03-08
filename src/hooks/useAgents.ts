@@ -156,15 +156,16 @@ export const useClockIn = () => {
       const { data: result, error: rpcError } = await supabase.rpc("verify_agent_pin", { _pin: pin });
 
       if (rpcError) throw rpcError;
-      if (!result || !result.found) throw new Error("Invalid PIN");
+      const agentResult = result as unknown as { found: boolean; id: string; name: string; email: string | null; phone: string | null; extension: string | null; telegram_chat_id: string | null };
+      if (!agentResult || !agentResult.found) throw new Error("Invalid PIN");
 
       const agent: Agent = {
-        id: result.id,
-        name: result.name,
-        email: result.email,
-        phone: result.phone,
-        extension: result.extension,
-        telegram_chat_id: result.telegram_chat_id,
+        id: agentResult.id,
+        name: agentResult.name,
+        email: agentResult.email,
+        phone: agentResult.phone,
+        extension: agentResult.extension,
+        telegram_chat_id: agentResult.telegram_chat_id,
         pin: "", // Not exposed by RPC
         is_active: true,
         created_at: "",
