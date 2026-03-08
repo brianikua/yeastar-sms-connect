@@ -395,3 +395,85 @@ export const useDeleteSchedule = () => {
     },
   });
 };
+
+export const useReassignShift = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      shiftId,
+      newAgentId,
+      reason,
+      originalAgent,
+      newAgent,
+      shiftDate,
+      startTime,
+      endTime,
+    }: {
+      shiftId: string;
+      newAgentId: string;
+      reason: string;
+      originalAgent: Agent;
+      newAgent: Agent;
+      shiftDate: string;
+      startTime: string;
+      endTime: string;
+    }) => {
+      // Check for conflicts with the new agent
+      const { data: existing } = await supabase
+        .from("shift_schedule")
+        .select("id, start_time, end_time")
+        .eq("agent_id", newAgentId)
+        .eq("shift_date", shiftDate)
+        .neq("id", shiftId);
+
+      const conflict = (existing || []).find((s: any) =>
+        timesOverlap(startTime, endTime, s.start_time, s.end_time)
+      );
+      if (conflict) {
+        throw new Error(`Conflict: ${newAgent.name} already has ${conflict.start_time}–${conflict.end_time} on this day`);
+      }
+
+      // Update the shift
+      const { error } = await supabase
+        .from("shift_schedule")
+        .update({
+          agent_id: newAgentId,
+          notes: `Reassigned from ${originalAgent.name}: ${reason}`,
+        })
+        .eq("id", shiftId);
+      if (error) throw error;
+
+      // Send notification (fire and forget)
+      supabase.functions.invoke("shift-notify", {
+        body: {
+          action: "reassign",
+          original_agent_name: originalAgent.name,
+          original_agent_email: originalAgent.email,
+          new_agent_name: newAgent.name,
+          new_agent_email: newAgent.email,
+          shift_date: shiftDate,
+          start_time: startTime,
+          end_time: endTime,
+          reason,
+        },
+      });
+
+      // Log the activity
+      await supabase.from("activity_logs").insert({
+        event_type: "shift_reassign",
+        message: `Shift on ${shiftDate} ${startTime}–${endTime} reassigned from ${originalAgent.name} to ${newAgent.name}. Reason: ${reason}`,
+        severity: "warning",
+      });
+
+      return { originalAgent, newAgent };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["shift-schedule"] });
+      queryClient.invalidateQueries({ queryKey: ["week-schedule"] });
+      toast.success(`Shift reassigned from ${result.originalAgent.name} to ${result.newAgent.name}`);
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Failed to reassign shift");
+    },
+  });
+};
