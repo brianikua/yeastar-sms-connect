@@ -118,20 +118,7 @@ const Index = () => {
             </>
           )}
 
-          {activeTab === "calls" && (
-            <>
-              <CallStatsCards stats={callStats} isLoading={callStatsLoading} />
-              <div className="grid gap-6 lg:grid-cols-3">
-                <div className="lg:col-span-2">
-                  <CallRecordsTable calls={calls} isLoading={callsLoading} />
-                </div>
-                <div className="space-y-6">
-                  <QuickDialWidget />
-                  <CallQueueStatus />
-                </div>
-              </div>
-            </>
-          )}
+          {activeTab === "comms" && <CommunicationsPanel />}
 
           {activeTab === "insights" && <InsightsPanel />}
 
@@ -144,8 +131,6 @@ const Index = () => {
               }}
             />
           )}
-
-          {activeTab === "contacts" && <ContactsPanel />}
 
           {activeTab === "kiosk" && <ClockInKiosk />}
 
