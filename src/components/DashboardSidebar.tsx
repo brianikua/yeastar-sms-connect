@@ -10,6 +10,7 @@ import {
   X,
   Shield,
   Crown,
+  UserCircle,
 } from "lucide-react";
 import { usePendingSwapCount } from "@/hooks/useShiftSwap";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ export type DashboardTab =
   | "insights"
   | "staff"
   | "roles"
+  | "profile"
   | "config";
 
 interface NavItem {
@@ -38,6 +40,7 @@ const navItems: NavItem[] = [
   { id: "insights", label: "Insights", icon: BarChart3 },
   { id: "staff", label: "Staff", icon: Shield },
   { id: "roles", label: "Roles", icon: Crown },
+  { id: "profile", label: "My Profile", icon: UserCircle },
   { id: "config", label: "Configuration", icon: Settings },
 ];
 
