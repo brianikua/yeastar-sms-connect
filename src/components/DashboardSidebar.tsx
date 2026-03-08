@@ -22,9 +22,8 @@ export type DashboardTab =
   | "dashboard"
   | "comms"
   | "insights"
-  | "config"
-  | "kiosk"
-  | "supervisor";
+  | "staff"
+  | "config";
 
 interface NavItem {
   id: DashboardTab;
@@ -36,8 +35,7 @@ const navItems: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "comms", label: "Calls & Contacts", icon: PhoneCall },
   { id: "insights", label: "Insights", icon: BarChart3 },
-  { id: "kiosk", label: "Clock In/Out", icon: Clock },
-  { id: "supervisor", label: "Supervisor", icon: Shield },
+  { id: "staff", label: "Staff", icon: Shield },
   { id: "config", label: "Configuration", icon: Settings },
 ];
 
