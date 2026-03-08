@@ -17,6 +17,17 @@ interface HourlyDistribution {
   count: number;
 }
 
+export interface ExtensionBreakdown {
+  extension: string;
+  label: string;
+  port: number;
+  totalCalls: number;
+  answeredCalls: number;
+  missedCalls: number;
+  calledBack: number;
+  smsCount: number;
+}
+
 export interface AnalyticsData {
   dailyMessages: DailyMessageCount[];
   portActivity: PortActivity[];
@@ -25,6 +36,7 @@ export interface AnalyticsData {
   averagePerDay: number;
   busiestPort: number | null;
   peakHour: number | null;
+  extensionBreakdown: ExtensionBreakdown[];
 }
 
 export const useAnalytics = (days: number = 7) => {
