@@ -1,15 +1,78 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAgents, useUpdateAgent, type Agent } from "@/hooks/useAgents";
-import { UserCog, Eye, EyeOff, KeyRound, Save, Send } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { UserCog, Eye, EyeOff, KeyRound, Save, Send, Phone, MessageSquare, PhoneIncoming, PhoneOutgoing } from "lucide-react";
 import { toast } from "sonner";
+
+const useSimPorts = () =>
+  useQuery({
+    queryKey: ["sim-port-config"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sim_port_config")
+        .select("*")
+        .order("port_number");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+const useAgentExtensionStats = (extension: string | null) =>
+  useQuery({
+    queryKey: ["agent-ext-stats", extension],
+    enabled: !!extension,
+    queryFn: async () => {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const since = thirtyDaysAgo.toISOString();
+
+      const [callsRes, smsRes] = await Promise.all([
+        supabase
+          .from("call_records")
+          .select("status, direction, talk_duration")
+          .eq("extension", extension!)
+          .gte("start_time", since),
+        supabase
+          .from("sms_messages")
+          .select("id, sim_port")
+          .gte("received_at", since),
+      ]);
+
+      const calls = callsRes.data || [];
+      const totalCalls = calls.length;
+      const answered = calls.filter((c) => c.status === "answered").length;
+      const missed = calls.filter((c) => c.status === "missed").length;
+      const inbound = calls.filter((c) => c.direction === "inbound").length;
+      const outbound = calls.filter((c) => c.direction === "outbound").length;
+      const talkTime = calls.reduce((sum, c) => sum + (c.talk_duration || 0), 0);
+
+      // Match SMS by sim_port linked to this extension
+      // We need to find which sim_port maps to this extension
+      const { data: ports } = await supabase
+        .from("sim_port_config")
+        .select("port_number")
+        .eq("extension", extension!);
+
+      const portNumbers = (ports || []).map((p) => p.port_number);
+      const smsCount = portNumbers.length > 0
+        ? (smsRes.data || []).filter((s) => portNumbers.includes(s.sim_port)).length
+        : 0;
+
+      return { totalCalls, answered, missed, inbound, outbound, talkTime, smsCount };
+    },
+  });
 
 export const AgentProfilePanel = () => {
   const { data: agents = [] } = useAgents();
+  const { data: simPorts = [] } = useSimPorts();
   const updateAgent = useUpdateAgent();
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -22,6 +85,44 @@ export const AgentProfilePanel = () => {
     extension: "",
     telegram_chat_id: "",
   });
+
+  const { data: extStats } = useAgentExtensionStats(
+    dialogOpen ? form.extension || null : null
+  );
+
+  // Collect all known extensions: from SIM ports + any custom ones already on agents
+  const availableExtensions = useMemo(() => {
+    const extSet = new Set<string>();
+    simPorts.forEach((p) => {
+      if (p.extension) extSet.add(p.extension);
+    });
+    agents.forEach((a) => {
+      if (a.extension) extSet.add(a.extension);
+    });
+    return Array.from(extSet).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [simPorts, agents]);
+
+  // Map extension to sim port label
+  const extToLabel = useMemo(() => {
+    const map = new Map<string, string>();
+    simPorts.forEach((p) => {
+      if (p.extension) {
+        map.set(p.extension, p.label || `Port ${p.port_number}`);
+      }
+    });
+    return map;
+  }, [simPorts]);
+
+  // Check which extensions are already assigned to other agents
+  const assignedExts = useMemo(() => {
+    const map = new Map<string, string>();
+    agents.forEach((a) => {
+      if (a.extension && a.id !== selectedAgent?.id) {
+        map.set(a.extension, a.name);
+      }
+    });
+    return map;
+  }, [agents, selectedAgent]);
 
   const openProfile = (agent: Agent) => {
     setSelectedAgent(agent);
@@ -56,6 +157,13 @@ export const AgentProfilePanel = () => {
     );
   };
 
+  const formatDuration = (seconds: number) => {
+    if (seconds < 60) return `${seconds}s`;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}m ${s}s`;
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -63,7 +171,7 @@ export const AgentProfilePanel = () => {
           <UserCog className="w-4 h-4" />
           Agent Profiles
         </CardTitle>
-        <CardDescription>Manage PINs, contact info, and Telegram IDs</CardDescription>
+        <CardDescription>Manage PINs, PBX extensions, and contact info</CardDescription>
       </CardHeader>
       <CardContent>
         {agents.length === 0 ? (
@@ -79,11 +187,20 @@ export const AgentProfilePanel = () => {
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
                   {agent.name.charAt(0)}
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium truncate">{agent.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {agent.extension ? `Ext ${agent.extension}` : "No ext"}
-                    {agent.telegram_chat_id ? " · 📱 TG" : ""}
+                  <div className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
+                    {agent.extension ? (
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                        <Phone className="w-2.5 h-2.5 mr-0.5" />
+                        Ext {agent.extension}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground/60">No ext</span>
+                    )}
+                    {agent.telegram_chat_id && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">📱 TG</Badge>
+                    )}
                   </div>
                 </div>
               </button>
@@ -92,11 +209,51 @@ export const AgentProfilePanel = () => {
         )}
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Edit Profile — {selectedAgent?.name}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
+              {/* Extension Stats Banner */}
+              {form.extension && extStats && (
+                <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">
+                    Extension {form.extension} — Last 30 Days
+                  </p>
+                  <div className="grid grid-cols-4 gap-2 text-center">
+                    <div>
+                      <div className="text-lg font-bold">{extStats.totalCalls}</div>
+                      <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5">
+                        <Phone className="w-2.5 h-2.5" /> Calls
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-green-500">{extStats.answered}</div>
+                      <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5">
+                        <PhoneIncoming className="w-2.5 h-2.5" /> Answered
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-destructive">{extStats.missed}</div>
+                      <div className="text-[10px] text-muted-foreground">Missed</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold">{extStats.smsCount}</div>
+                      <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5">
+                        <MessageSquare className="w-2.5 h-2.5" /> SMS
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-between mt-2 text-[10px] text-muted-foreground">
+                    <span>
+                      <PhoneIncoming className="w-2.5 h-2.5 inline mr-0.5" />
+                      {extStats.inbound} in / <PhoneOutgoing className="w-2.5 h-2.5 inline mr-0.5" />{extStats.outbound} out
+                    </span>
+                    <span>Talk: {formatDuration(extStats.talkTime)}</span>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <Label className="flex items-center gap-1"><KeyRound className="w-3 h-3" /> Change PIN</Label>
                 <div className="flex gap-2">
@@ -123,8 +280,30 @@ export const AgentProfilePanel = () => {
                 <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
               </div>
               <div>
-                <Label>Extension</Label>
-                <Input value={form.extension} onChange={(e) => setForm({ ...form, extension: e.target.value })} placeholder="e.g. 8001" />
+                <Label className="flex items-center gap-1"><Phone className="w-3 h-3" /> PBX Extension</Label>
+                <Select
+                  value={form.extension || "__none__"}
+                  onValueChange={(val) => setForm({ ...form, extension: val === "__none__" ? "" : val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select PBX extension" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">No extension</SelectItem>
+                    {availableExtensions.map((ext) => {
+                      const label = extToLabel.get(ext);
+                      const assignedTo = assignedExts.get(ext);
+                      return (
+                        <SelectItem key={ext} value={ext} disabled={!!assignedTo}>
+                          Ext {ext}
+                          {label ? ` (${label})` : ""}
+                          {assignedTo ? ` — assigned to ${assignedTo}` : ""}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">Links this agent to a PBX user for call/SMS tracking</p>
               </div>
               <div>
                 <Label className="flex items-center gap-1"><Send className="w-3 h-3" /> Telegram Chat ID</Label>
