@@ -47,7 +47,6 @@ async function sendSmsTg400(
   message: string,
   simPort: number = 1
 ): Promise<void> {
-  // Try JSON body first (newer firmware)
   const endpoints = [
     { url: `http://${gatewayIp}/api/v1.0/sms/send`, body: JSON.stringify({ port: simPort, phone: toNumber, message }) },
     { url: `http://${gatewayIp}/api/v1.0/sms/send`, body: JSON.stringify({ port: String(simPort), number: toNumber, content: message }) },
@@ -76,7 +75,6 @@ async function sendSmsTg400(
     }
   }
 
-  // Fallback: form-encoded
   const formBody = new URLSearchParams({ port: String(simPort), phone: toNumber, message });
   const res = await fetch(`http://${gatewayIp}/api/v1.0/sms/send`, {
     method: "POST",
@@ -90,6 +88,72 @@ async function sendSmsTg400(
   if (!res.ok) {
     throw new Error(`TG400 SMS failed [${res.status}]: ${await res.text()}`);
   }
+}
+
+interface ExtensionStats {
+  extension: string;
+  label: string;
+  totalCalls: number;
+  answeredCalls: number;
+  missedCalls: number;
+  calledBack: number;
+  totalSms: number;
+}
+
+function buildExtensionStats(
+  callsData: any[],
+  smsData: any[],
+  simData: any[]
+): ExtensionStats[] {
+  // Build port-to-extension map from sim_port_config
+  const portExtMap: Record<number, { extension: string; label: string }> = {};
+  for (const sim of simData) {
+    portExtMap[sim.port_number] = {
+      extension: sim.extension || `Port ${sim.port_number}`,
+      label: sim.label || sim.extension || `Port ${sim.port_number}`,
+    };
+  }
+
+  const statsMap: Record<string, ExtensionStats> = {};
+
+  const getOrCreate = (ext: string, label: string): ExtensionStats => {
+    if (!statsMap[ext]) {
+      statsMap[ext] = {
+        extension: ext,
+        label,
+        totalCalls: 0,
+        answeredCalls: 0,
+        missedCalls: 0,
+        calledBack: 0,
+        totalSms: 0,
+      };
+    }
+    return statsMap[ext];
+  };
+
+  // Aggregate calls by extension
+  for (const call of callsData) {
+    const ext = call.extension || (call.sim_port && portExtMap[call.sim_port]?.extension) || "Unknown";
+    const label = (call.sim_port && portExtMap[call.sim_port]?.label) || ext;
+    const s = getOrCreate(ext, label);
+    s.totalCalls++;
+    if (call.status === "answered") s.answeredCalls++;
+    if (call.status === "missed") {
+      s.missedCalls++;
+      if (call.callback_attempted) s.calledBack++;
+    }
+  }
+
+  // Aggregate SMS by sim_port → extension
+  for (const sms of smsData) {
+    const portInfo = portExtMap[sms.sim_port];
+    const ext = portInfo?.extension || `Port ${sms.sim_port}`;
+    const label = portInfo?.label || ext;
+    const s = getOrCreate(ext, label);
+    s.totalSms++;
+  }
+
+  return Object.values(statsMap).sort((a, b) => (b.totalCalls + b.totalSms) - (a.totalCalls + a.totalSms));
 }
 
 serve(async (req) => {
@@ -144,6 +208,9 @@ serve(async (req) => {
     const notAnsweredCalls = callsData.filter((c: any) => c.status !== "answered").length;
     const errorLogs = logsData.filter((l: any) => l.severity === "error").length;
 
+    // Build per-extension stats
+    const extStats = buildExtensionStats(callsData, smsData, simData);
+
     const periodLabel = hours >= 168
       ? `${Math.round(hours / 24)} days`
       : hours >= 48
@@ -160,8 +227,11 @@ serve(async (req) => {
         throw new Error("Gateway config not found — cannot send SMS. Please configure the TG400 gateway first.");
       }
 
-      // Build compact SMS text (SMS has ~160 char limit per segment, keep concise)
       const pendingCallbacks = missedCalls.filter((c: any) => !c.callback_attempted).length;
+
+      const extLines = extStats.map(s =>
+        `  ${s.label}: ${s.totalCalls}C/${s.totalSms}S | Miss:${s.missedCalls} CB:${s.calledBack}`
+      ).join("\n");
 
       const smsText = [
         `[TG400 Report - Last ${periodLabel}]`,
@@ -174,6 +244,7 @@ serve(async (req) => {
         `Pending callbacks: ${pendingCallbacks}`,
         `SIMs: ${activeSims}/${simData.length} active`,
         errorData.length > 0 ? `Errors: ${errorData.length} unresolved` : `No errors`,
+        extStats.length > 0 ? `\nPer Extension:\n${extLines}` : '',
       ].join("\n");
 
       await sendSmsTg400(
@@ -207,6 +278,20 @@ serve(async (req) => {
           const cb = c.callback_attempted ? `<span style="color:#16a34a">✓ Called back</span>` : `<span style="color:#dc2626">⏳ Pending</span>`;
           return `<tr style="border-bottom:1px solid #f0f0f0"><td style="padding:8px 4px;font-size:13px">${caller}</td><td style="padding:8px 4px;font-size:13px;color:#555">${time} UTC</td><td style="padding:8px 4px;font-size:13px">${cb}</td></tr>`;
         }).join("");
+
+      // Per-extension rows for email
+      const extensionRows = extStats.map(s => {
+        const cbRate = s.missedCalls > 0 ? Math.round((s.calledBack / s.missedCalls) * 100) : 100;
+        const cbColor = cbRate >= 80 ? '#16a34a' : cbRate >= 50 ? '#ca8a04' : '#dc2626';
+        return `<tr style="border-bottom:1px solid #f0f0f0">
+          <td style="padding:8px 4px;font-size:13px;font-weight:600">${s.label}</td>
+          <td style="padding:8px 4px;font-size:13px;text-align:center">${s.totalCalls}</td>
+          <td style="padding:8px 4px;font-size:13px;text-align:center;color:#16a34a">${s.answeredCalls}</td>
+          <td style="padding:8px 4px;font-size:13px;text-align:center;color:#dc2626">${s.missedCalls}</td>
+          <td style="padding:8px 4px;font-size:13px;text-align:center;color:${cbColor}">${s.calledBack}${s.missedCalls > 0 ? ` (${cbRate}%)` : ''}</td>
+          <td style="padding:8px 4px;font-size:13px;text-align:center">${s.totalSms}</td>
+        </tr>`;
+      }).join("");
 
       const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
@@ -262,6 +347,22 @@ serve(async (req) => {
           </td>
         </tr>
       </table>
+
+      <!-- Per-Extension Breakdown -->
+      ${extensionRows ? `
+      <h2 style="font-size:14px;color:#374151;margin:0 0 10px">📋 Per Extension Breakdown</h2>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px">
+        <tr style="background:#f9fafb">
+          <th style="padding:8px 4px;text-align:left;font-size:12px;color:#666">Extension</th>
+          <th style="padding:8px 4px;text-align:center;font-size:12px;color:#666">Calls</th>
+          <th style="padding:8px 4px;text-align:center;font-size:12px;color:#666">Answered</th>
+          <th style="padding:8px 4px;text-align:center;font-size:12px;color:#666">Missed</th>
+          <th style="padding:8px 4px;text-align:center;font-size:12px;color:#666">Called Back</th>
+          <th style="padding:8px 4px;text-align:center;font-size:12px;color:#666">SMS</th>
+        </tr>
+        ${extensionRows}
+      </table>
+      ` : ""}
 
       <!-- Call Breakdown -->
       <h2 style="font-size:14px;color:#374151;margin:0 0 10px">📞 Call Breakdown</h2>
@@ -334,6 +435,17 @@ serve(async (req) => {
       msg += `📡 *SIMs:* ${activeSims}/${simData.length} active\n`;
       msg += `🚨 *Errors:* ${errorData.length} unresolved\n`;
 
+      // Per-extension breakdown in Telegram
+      if (extStats.length > 0) {
+        msg += `\n📋 *Per Extension:*\n`;
+        for (const s of extStats) {
+          const cbInfo = s.missedCalls > 0
+            ? `CB: ${s.calledBack}/${s.missedCalls}`
+            : `CB: n/a`;
+          msg += `  • *${e(s.label)}*: ${s.totalCalls} calls \\| ${s.totalSms} SMS \\| Miss: ${s.missedCalls} \\| ${e(cbInfo)}\n`;
+        }
+      }
+
       if (missedCalls.length > 0) {
         msg += `\n📵 *Missed Calls:*\n`;
         for (const c of missedCalls.slice(0, 8)) {
@@ -375,6 +487,7 @@ serve(async (req) => {
         call_count: callsData.length,
         missed_calls: missedCalls.length,
         answered_calls: answeredCalls.length,
+        extension_stats: extStats,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
