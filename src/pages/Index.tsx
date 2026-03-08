@@ -16,7 +16,7 @@ import { Server, Phone, Database } from "lucide-react";
 import { toast } from "sonner";
 import { useSimPorts } from "@/hooks/useSimPorts";
 import { useSmsMessages } from "@/hooks/useSmsMessages";
-import { useActivityLogs } from "@/hooks/useActivityLogs";
+
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 
 const Index = () => {
