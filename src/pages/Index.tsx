@@ -140,15 +140,7 @@ const Index = () => {
             </>
           )}
 
-          {activeTab === "analytics" && <AnalyticsDashboard />}
-
-          {activeTab === "logs" && (
-            logsLoading ? (
-              <Skeleton className="h-[400px] rounded-lg" />
-            ) : (
-              <ActivityLog logs={logs} />
-            )
-          )}
+          {activeTab === "insights" && <InsightsPanel />}
 
           {activeTab === "config" && (
             <ConfigurationPanel
@@ -160,22 +152,7 @@ const Index = () => {
             />
           )}
 
-          {activeTab === "ai" && (
-            <>
-              <AiAutomationPanel />
-              <PredictiveMaintenancePanel />
-              <div className="grid gap-6 lg:grid-cols-2">
-                <ErrorLogsPanel />
-                <AiConfigPanel />
-              </div>
-            </>
-          )}
-
-          {activeTab === "telegram" && <TelegramPanel />}
-
           {activeTab === "contacts" && <ContactsPanel />}
-
-          {activeTab === "reports" && <MissedCallsReportPanel />}
 
           {activeTab === "kiosk" && <ClockInKiosk />}
 
