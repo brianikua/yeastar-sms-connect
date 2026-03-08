@@ -25,6 +25,7 @@ import {
   Loader2,
   Merge,
   ArrowUpToLine,
+  FileDown,
 } from "lucide-react";
 import { useContacts, contactsToGoogleCSV, parseGoogleCSV, Contact } from "@/hooks/useContacts";
 import { useGoogleContacts } from "@/hooks/useGoogleContacts";
