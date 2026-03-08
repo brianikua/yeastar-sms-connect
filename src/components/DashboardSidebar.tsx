@@ -22,7 +22,8 @@ export type DashboardTab =
   | "comms"
   | "insights"
   | "staff"
-  | "roles";
+  | "roles"
+  | "config";
 
 interface NavItem {
   id: DashboardTab;
@@ -34,9 +35,10 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "viewer" },
   { id: "comms", label: "Calls & Contacts", icon: PhoneCall, minRole: "operator" },
-  { id: "insights", label: "Insights & Config", icon: BarChart3, minRole: "viewer" },
+  { id: "insights", label: "Insights", icon: BarChart3, minRole: "viewer" },
   { id: "staff", label: "Staff", icon: Shield, minRole: "admin" },
   { id: "roles", label: "Roles", icon: Crown, minRole: "admin" },
+  { id: "config", label: "Configuration", icon: Settings, minRole: "admin" },
 ];
 
 const ROLE_LEVEL: Record<AppRole, number> = {
