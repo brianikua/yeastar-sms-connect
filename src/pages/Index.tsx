@@ -6,18 +6,12 @@ import { SystemStatusCard } from "@/components/SystemStatusCard";
 import { SmsInbox } from "@/components/SmsInbox";
 import { ActivityLog } from "@/components/ActivityLog";
 import { ConfigurationPanel } from "@/components/ConfigurationPanel";
-import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
 import { CallRecordsTable } from "@/components/CallRecordsTable";
 import { CallStatsCards } from "@/components/CallStatsCards";
 import { QuickDialWidget } from "@/components/QuickDialWidget";
 import { CallQueueStatus } from "@/components/CallQueueStatus";
-import { ErrorLogsPanel } from "@/components/ErrorLogsPanel";
-import { AiConfigPanel } from "@/components/AiConfigPanel";
-import { TelegramPanel } from "@/components/TelegramPanel";
 import { ContactsPanel } from "@/components/ContactsPanel";
-import { PredictiveMaintenancePanel } from "@/components/PredictiveMaintenancePanel";
-import { AiAutomationPanel } from "@/components/AiAutomationPanel";
-import { MissedCallsReportPanel } from "@/components/MissedCallsReportPanel";
+import { InsightsPanel } from "@/components/InsightsPanel";
 import { ClockInKiosk } from "@/components/ClockInKiosk";
 import { SupervisorPanel } from "@/components/SupervisorPanel";
 import { DashboardSidebar, DashboardTab } from "@/components/DashboardSidebar";
@@ -146,15 +140,7 @@ const Index = () => {
             </>
           )}
 
-          {activeTab === "analytics" && <AnalyticsDashboard />}
-
-          {activeTab === "logs" && (
-            logsLoading ? (
-              <Skeleton className="h-[400px] rounded-lg" />
-            ) : (
-              <ActivityLog logs={logs} />
-            )
-          )}
+          {activeTab === "insights" && <InsightsPanel />}
 
           {activeTab === "config" && (
             <ConfigurationPanel
@@ -166,22 +152,7 @@ const Index = () => {
             />
           )}
 
-          {activeTab === "ai" && (
-            <>
-              <AiAutomationPanel />
-              <PredictiveMaintenancePanel />
-              <div className="grid gap-6 lg:grid-cols-2">
-                <ErrorLogsPanel />
-                <AiConfigPanel />
-              </div>
-            </>
-          )}
-
-          {activeTab === "telegram" && <TelegramPanel />}
-
           {activeTab === "contacts" && <ContactsPanel />}
-
-          {activeTab === "reports" && <MissedCallsReportPanel />}
 
           {activeTab === "kiosk" && <ClockInKiosk />}
 
