@@ -2,8 +2,10 @@ import { useState, DragEvent } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAgents, useWeekSchedule, useCreateSchedule, useDeleteSchedule, useReassignShift, timesOverlap, Agent, ShiftScheduleEntry } from "@/hooks/useAgents";
-import { ChevronLeft, ChevronRight, X, GripVertical, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, GripVertical, RefreshCw, Users, Clock, Pencil, Check } from "lucide-react";
 import { toast } from "sonner";
 import { format, addDays, startOfWeek, endOfWeek, isSameDay } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -11,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 const TIME_SLOTS = [
   { label: "06:00 – 10:00", start: "06:00", end: "10:00" },
@@ -46,9 +50,22 @@ const REASSIGN_REASONS = [
 ];
 
 export const WeeklyShiftPlanner = () => {
+  const queryClient = useQueryClient();
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedSlot, setSelectedSlot] = useState<string>("08:00 – 17:00");
   const [draggedAgent, setDraggedAgent] = useState<Agent | null>(null);
+
+  // Bulk scheduling state
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkAgents, setBulkAgents] = useState<Set<string>>(new Set());
+  const [bulkDays, setBulkDays] = useState<Set<number>>(new Set());
+  const [bulkSlot, setBulkSlot] = useState("08:00 – 17:00");
+  const [bulkLoading, setBulkLoading] = useState(false);
+
+  // Inline edit state
+  const [editingShift, setEditingShift] = useState<string | null>(null);
+  const [editStart, setEditStart] = useState("");
+  const [editEnd, setEditEnd] = useState("");
 
   // Reassign dialog state
   const [reassignDialog, setReassignDialog] = useState<{
@@ -56,7 +73,6 @@ export const WeeklyShiftPlanner = () => {
     entry: ShiftScheduleEntry | null;
   }>({ open: false, entry: null });
   const [reassignAgentId, setReassignAgentId] = useState("");
-  const [reassignReason, setReassignReason] = useState("");
   const [reassignReasonPreset, setReassignReasonPreset] = useState("");
   const [customReason, setCustomReason] = useState("");
 
@@ -127,6 +143,123 @@ export const WeeklyShiftPlanner = () => {
     deleteSchedule.mutate(id);
   };
 
+  // -- Bulk scheduling --
+  const toggleBulkAgent = (id: string) => {
+    setBulkAgents((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleBulkDay = (dayIdx: number) => {
+    setBulkDays((prev) => {
+      const next = new Set(prev);
+      next.has(dayIdx) ? next.delete(dayIdx) : next.add(dayIdx);
+      return next;
+    });
+  };
+
+  const handleBulkSchedule = async () => {
+    if (bulkAgents.size === 0 || bulkDays.size === 0) {
+      toast.error("Select at least one agent and one day");
+      return;
+    }
+
+    const slot = TIME_SLOTS.find((s) => `${s.start} – ${s.end}` === bulkSlot) || TIME_SLOTS[2];
+    setBulkLoading(true);
+
+    const entries: { agent_id: string; shift_date: string; start_time: string; end_time: string }[] = [];
+    let skipped = 0;
+
+    for (const agentId of bulkAgents) {
+      for (const dayIdx of bulkDays) {
+        const dateStr = format(days[dayIdx], "yyyy-MM-dd");
+        const existing = weekSchedule.filter(
+          (s) => s.agent_id === agentId && s.shift_date === dateStr
+        );
+        const conflict = existing.find((s) =>
+          timesOverlap(slot.start, slot.end, s.start_time, s.end_time)
+        );
+        if (conflict) {
+          skipped++;
+          continue;
+        }
+        entries.push({
+          agent_id: agentId,
+          shift_date: dateStr,
+          start_time: slot.start,
+          end_time: slot.end,
+        });
+      }
+    }
+
+    if (entries.length === 0) {
+      toast.error("All combinations have conflicts — no shifts created");
+      setBulkLoading(false);
+      return;
+    }
+
+    const { error } = await supabase.from("shift_schedule").insert(entries);
+    setBulkLoading(false);
+
+    if (error) {
+      toast.error("Failed to create shifts: " + error.message);
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["shift-schedule"] });
+    queryClient.invalidateQueries({ queryKey: ["week-schedule"] });
+
+    toast.success(`${entries.length} shift(s) created${skipped > 0 ? `, ${skipped} skipped (conflicts)` : ""}`);
+    setBulkOpen(false);
+    setBulkAgents(new Set());
+    setBulkDays(new Set());
+  };
+
+  // -- Inline shift time editing --
+  const startEditing = (entry: ShiftScheduleEntry) => {
+    setEditingShift(entry.id);
+    setEditStart(entry.start_time);
+    setEditEnd(entry.end_time);
+  };
+
+  const saveEditedTime = async (entry: ShiftScheduleEntry) => {
+    if (!editStart || !editEnd) return;
+    if (editStart === entry.start_time && editEnd === entry.end_time) {
+      setEditingShift(null);
+      return;
+    }
+
+    // Check conflicts with other shifts for same agent on same day
+    const dayShifts = weekSchedule.filter(
+      (s) => s.agent_id === entry.agent_id && s.shift_date === entry.shift_date && s.id !== entry.id
+    );
+    const conflict = dayShifts.find((s) =>
+      timesOverlap(editStart, editEnd, s.start_time, s.end_time)
+    );
+    if (conflict) {
+      toast.error(`Conflict with ${conflict.start_time}–${conflict.end_time}`);
+      return;
+    }
+
+    const { error } = await supabase
+      .from("shift_schedule")
+      .update({ start_time: editStart, end_time: editEnd })
+      .eq("id", entry.id);
+
+    if (error) {
+      toast.error("Failed to update shift");
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["shift-schedule"] });
+    queryClient.invalidateQueries({ queryKey: ["week-schedule"] });
+    toast.success("Shift time updated");
+    setEditingShift(null);
+  };
+
+  // -- Reassign --
   const openReassignDialog = (entry: ShiftScheduleEntry) => {
     setReassignDialog({ open: true, entry });
     setReassignAgentId("");
@@ -166,13 +299,23 @@ export const WeeklyShiftPlanner = () => {
     ? agents.filter((a) => a.id !== reassignDialog.entry!.agent_id)
     : [];
 
+  const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
   return (
     <>
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-4">
             <CardTitle className="text-sm font-medium">Weekly Shift Planner</CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs gap-1.5"
+                onClick={() => setBulkOpen(true)}
+              >
+                <Users className="w-3.5 h-3.5" /> Bulk Schedule
+              </Button>
               <Select value={selectedSlot} onValueChange={setSelectedSlot}>
                 <SelectTrigger className="w-[180px] h-8 text-xs">
                   <SelectValue />
@@ -199,7 +342,7 @@ export const WeeklyShiftPlanner = () => {
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            {format(weekStart, "MMM d")} – {format(weekEnd, "MMM d, yyyy")} · Drag agents into day columns
+            {format(weekStart, "MMM d")} – {format(weekEnd, "MMM d, yyyy")} · Drag agents or use Bulk Schedule
           </p>
         </CardHeader>
         <CardContent>
@@ -266,28 +409,70 @@ export const WeeklyShiftPlanner = () => {
                         )}
                       >
                         <div className="font-medium truncate">{entry.agent?.name || "?"}</div>
-                        <div className="opacity-70">{entry.start_time}–{entry.end_time}</div>
+
+                        {editingShift === entry.id ? (
+                          <div className="flex items-center gap-0.5 mt-0.5">
+                            <Input
+                              type="time"
+                              value={editStart}
+                              onChange={(e) => setEditStart(e.target.value)}
+                              className="h-5 text-[10px] px-1 w-[60px] bg-background"
+                            />
+                            <span className="text-[8px]">–</span>
+                            <Input
+                              type="time"
+                              value={editEnd}
+                              onChange={(e) => setEditEnd(e.target.value)}
+                              className="h-5 text-[10px] px-1 w-[60px] bg-background"
+                            />
+                            <button
+                              onClick={() => saveEditedTime(entry)}
+                              className="flex items-center justify-center w-4 h-4 rounded bg-primary text-primary-foreground ml-0.5"
+                            >
+                              <Check className="w-2.5 h-2.5" />
+                            </button>
+                            <button
+                              onClick={() => setEditingShift(null)}
+                              className="flex items-center justify-center w-4 h-4 rounded bg-muted text-muted-foreground"
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div
+                            className="opacity-70 cursor-pointer hover:opacity-100 flex items-center gap-0.5"
+                            onClick={() => startEditing(entry)}
+                            title="Click to edit time"
+                          >
+                            <Clock className="w-2.5 h-2.5" />
+                            {entry.start_time}–{entry.end_time}
+                            <Pencil className="w-2 h-2 opacity-0 group-hover:opacity-60 ml-0.5" />
+                          </div>
+                        )}
+
                         {entry.notes && (
                           <div className="opacity-60 truncate italic mt-0.5" title={entry.notes}>
                             {entry.notes}
                           </div>
                         )}
-                        <div className="absolute -top-1 -right-1 hidden group-hover:flex items-center gap-0.5">
-                          <button
-                            onClick={() => openReassignDialog(entry)}
-                            className="flex items-center justify-center w-4 h-4 rounded-full bg-primary text-primary-foreground"
-                            title="Reassign shift"
-                          >
-                            <RefreshCw className="w-2.5 h-2.5" />
-                          </button>
-                          <button
-                            onClick={() => handleRemoveShift(entry.id)}
-                            className="flex items-center justify-center w-4 h-4 rounded-full bg-destructive text-destructive-foreground"
-                            title="Remove shift"
-                          >
-                            <X className="w-2.5 h-2.5" />
-                          </button>
-                        </div>
+                        {editingShift !== entry.id && (
+                          <div className="absolute -top-1 -right-1 hidden group-hover:flex items-center gap-0.5">
+                            <button
+                              onClick={() => openReassignDialog(entry)}
+                              className="flex items-center justify-center w-4 h-4 rounded-full bg-primary text-primary-foreground"
+                              title="Reassign shift"
+                            >
+                              <RefreshCw className="w-2.5 h-2.5" />
+                            </button>
+                            <button
+                              onClick={() => handleRemoveShift(entry.id)}
+                              className="flex items-center justify-center w-4 h-4 rounded-full bg-destructive text-destructive-foreground"
+                              title="Remove shift"
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
 
@@ -305,9 +490,152 @@ export const WeeklyShiftPlanner = () => {
           <div className="mt-4 flex items-center gap-4 text-[10px] text-muted-foreground">
             <span>📌 Selected slot: <Badge variant="outline" className="text-[10px] py-0">{selectedSlot}</Badge></span>
             <span>🔄 Hover a shift to reassign or remove</span>
+            <span>✏️ Click time to edit inline</span>
           </div>
         </CardContent>
       </Card>
+
+      {/* Bulk Schedule Dialog */}
+      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-primary" />
+              Bulk Schedule Shifts
+            </DialogTitle>
+            <DialogDescription>
+              Select agents and days to schedule the same shift for all at once.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Time slot */}
+            <div className="space-y-2">
+              <Label>Shift Time</Label>
+              <Select value={bulkSlot} onValueChange={setBulkSlot}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIME_SLOTS.map((slot) => (
+                    <SelectItem key={`${slot.start}-${slot.end}`} value={`${slot.start} – ${slot.end}`}>
+                      {slot.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Agent selection */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Agents</Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-[10px] px-2"
+                  onClick={() => {
+                    if (bulkAgents.size === agents.length) {
+                      setBulkAgents(new Set());
+                    } else {
+                      setBulkAgents(new Set(agents.map((a) => a.id)));
+                    }
+                  }}
+                >
+                  {bulkAgents.size === agents.length ? "Deselect All" : "Select All"}
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {agents.map((agent) => (
+                  <label
+                    key={agent.id}
+                    className={cn(
+                      "flex items-center gap-2 p-2 rounded-md border cursor-pointer transition-colors",
+                      bulkAgents.has(agent.id)
+                        ? "border-primary/50 bg-primary/5"
+                        : "border-border hover:bg-muted/30"
+                    )}
+                  >
+                    <Checkbox
+                      checked={bulkAgents.has(agent.id)}
+                      onCheckedChange={() => toggleBulkAgent(agent.id)}
+                    />
+                    <span className="text-sm">{agent.name}</span>
+                    {agent.extension && (
+                      <span className="text-[10px] text-muted-foreground">Ext {agent.extension}</span>
+                    )}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Day selection */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Days ({format(weekStart, "MMM d")} – {format(weekEnd, "MMM d")})</Label>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[10px] px-2"
+                    onClick={() => setBulkDays(new Set([0, 1, 2, 3, 4]))}
+                  >
+                    Weekdays
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[10px] px-2"
+                    onClick={() => {
+                      if (bulkDays.size === 7) setBulkDays(new Set());
+                      else setBulkDays(new Set([0, 1, 2, 3, 4, 5, 6]));
+                    }}
+                  >
+                    All
+                  </Button>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {DAY_LABELS.map((label, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => toggleBulkDay(idx)}
+                    className={cn(
+                      "flex-1 py-2 rounded-md border text-xs font-medium transition-colors",
+                      bulkDays.has(idx)
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border hover:bg-muted/30"
+                    )}
+                  >
+                    <div>{label}</div>
+                    <div className="text-[10px] opacity-70">{format(days[idx], "d")}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Summary */}
+            {bulkAgents.size > 0 && bulkDays.size > 0 && (
+              <div className="rounded-md bg-muted/30 border border-border/50 p-2 text-xs text-muted-foreground">
+                Will create up to <strong className="text-foreground">{bulkAgents.size * bulkDays.size}</strong> shifts
+                for <strong className="text-foreground">{bulkAgents.size}</strong> agent(s)
+                across <strong className="text-foreground">{bulkDays.size}</strong> day(s).
+                Conflicts are automatically skipped.
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setBulkOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleBulkSchedule}
+              disabled={bulkLoading || bulkAgents.size === 0 || bulkDays.size === 0}
+            >
+              {bulkLoading ? "Scheduling..." : `Schedule ${bulkAgents.size * bulkDays.size} Shift(s)`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Reassign Shift Dialog */}
       <Dialog open={reassignDialog.open} onOpenChange={(open) => setReassignDialog({ open, entry: open ? reassignDialog.entry : null })}>
