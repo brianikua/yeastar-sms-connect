@@ -59,7 +59,7 @@ const sections: SectionItem[] = [
   { id: "telegram", label: "Telegram", icon: Send, group: "insights" },
   { id: "gateway", label: "Gateway", icon: Router, group: "config" },
   { id: "pbx", label: "PBX", icon: Phone, group: "config" },
-  { id: "sim", label: "SIM Ports", icon: Sim, group: "config" },
+  { id: "sim", label: "SIM Ports", icon: ScanLine, group: "config" },
   { id: "auto-reply", label: "Auto Reply", icon: MessageSquareReply, group: "config" },
   { id: "notifications", label: "Notifications", icon: Bell, group: "config" },
   { id: "agent", label: "Local Agent", icon: Cpu, group: "config" },
