@@ -12,8 +12,9 @@ import {
   Crown,
 } from "lucide-react";
 import { usePendingSwapCount } from "@/hooks/useShiftSwap";
+import { useCurrentUserRole, type AppRole } from "@/hooks/useRoles";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -30,16 +31,24 @@ interface NavItem {
   id: DashboardTab;
   label: string;
   icon: React.ElementType;
+  minRole: AppRole;
 }
 
 const navItems: NavItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "comms", label: "Calls & Contacts", icon: PhoneCall },
-  { id: "insights", label: "Insights", icon: BarChart3 },
-  { id: "staff", label: "Staff", icon: Shield },
-  { id: "roles", label: "Roles", icon: Crown },
-  { id: "config", label: "Configuration", icon: Settings },
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "viewer" },
+  { id: "comms", label: "Calls & Contacts", icon: PhoneCall, minRole: "operator" },
+  { id: "insights", label: "Insights", icon: BarChart3, minRole: "viewer" },
+  { id: "staff", label: "Staff", icon: Shield, minRole: "admin" },
+  { id: "roles", label: "Roles", icon: Crown, minRole: "admin" },
+  { id: "config", label: "Configuration", icon: Settings, minRole: "admin" },
 ];
+
+const ROLE_LEVEL: Record<AppRole, number> = {
+  viewer: 0,
+  operator: 1,
+  admin: 2,
+  super_admin: 3,
+};
 
 interface DashboardSidebarProps {
   activeTab: DashboardTab;
@@ -51,17 +60,19 @@ const NavItems = ({
   onTabChange,
   collapsed,
   onItemClick,
+  visibleItems,
 }: {
   activeTab: DashboardTab;
   onTabChange: (tab: DashboardTab) => void;
   collapsed: boolean;
   onItemClick?: () => void;
+  visibleItems: NavItem[];
 }) => {
   const { data: pendingCount = 0 } = usePendingSwapCount();
 
   return (
     <nav className="flex-1 flex flex-col gap-1 px-2">
-      {navItems.map((item) => {
+      {visibleItems.map((item) => {
         const isActive = activeTab === item.id;
         const badge = item.id === "staff" && pendingCount > 0 ? pendingCount : 0;
         const button = (
@@ -113,6 +124,12 @@ export const DashboardSidebar = ({ activeTab, onTabChange }: DashboardSidebarPro
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { data: currentRole } = useCurrentUserRole();
+
+  const visibleItems = useMemo(() => {
+    const level = ROLE_LEVEL[currentRole || "viewer"];
+    return navItems.filter(item => level >= ROLE_LEVEL[item.minRole]);
+  }, [currentRole]);
 
   // Close mobile drawer on resize to desktop
   useEffect(() => {
@@ -142,6 +159,7 @@ export const DashboardSidebar = ({ activeTab, onTabChange }: DashboardSidebarPro
               onTabChange={onTabChange}
               collapsed={false}
               onItemClick={() => setMobileOpen(false)}
+              visibleItems={visibleItems}
             />
           </div>
         </SheetContent>
@@ -170,7 +188,7 @@ export const DashboardSidebar = ({ activeTab, onTabChange }: DashboardSidebarPro
           </Button>
         </div>
 
-        <NavItems activeTab={activeTab} onTabChange={onTabChange} collapsed={collapsed} />
+        <NavItems activeTab={activeTab} onTabChange={onTabChange} collapsed={collapsed} visibleItems={visibleItems} />
       </aside>
     </TooltipProvider>
   );
