@@ -31,7 +31,7 @@ const sections: SectionItem[] = [
 
 export const InsightsPanel = () => {
   const [active, setActive] = useState<Section>("analytics");
-  const { data: logs = [], isLoading: logsLoading } = useActivityLogs();
+  const { data: logs = [], isLoading: logsLoading, isStreaming } = useActivityLogs();
 
   return (
     <div className="space-y-4">
