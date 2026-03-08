@@ -181,7 +181,7 @@ export const useClockIn = () => {
         if (error) throw error;
         // Send notification (fire and forget)
         supabase.functions.invoke("shift-notify", {
-          body: { action: "clock_out", agent_name: agent.name, agent_email: agent.email, clock_time: new Date().toISOString() },
+          body: { action: "clock_out", agent_name: agent.name, agent_email: agent.email, agent_id: agent.id, clock_time: new Date().toISOString() },
         });
         return { action: "clock_out" as const, agent };
       } else {
