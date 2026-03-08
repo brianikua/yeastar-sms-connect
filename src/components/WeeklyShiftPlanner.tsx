@@ -78,11 +78,15 @@ export const WeeklyShiftPlanner = () => {
     const slot = TIME_SLOTS.find((s) => `${s.start} – ${s.end}` === selectedSlot) || TIME_SLOTS[2];
     const dateStr = format(date, "yyyy-MM-dd");
 
-    // Check if agent already scheduled for this day at this time
-    const existing = weekSchedule.find(
-      (s) => s.agent_id === agentId && s.shift_date === dateStr && s.start_time === slot.start
+    // Check for overlapping shifts on the same day (client-side)
+    const dayShifts = weekSchedule.filter(
+      (s) => s.agent_id === agentId && s.shift_date === dateStr
     );
-    if (existing) {
+    const conflict = dayShifts.find((s) =>
+      timesOverlap(slot.start, slot.end, s.start_time, s.end_time)
+    );
+    if (conflict) {
+      toast.error(`Conflict: ${conflict.agent?.name || "Agent"} already has ${conflict.start_time}–${conflict.end_time} on this day`);
       setDraggedAgent(null);
       return;
     }
