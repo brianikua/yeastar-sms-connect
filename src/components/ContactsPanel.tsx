@@ -191,6 +191,15 @@ Office Reception,+1122334455,Main office line`;
               <Upload className="w-4 h-4" />
               Import CSV
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-muted-foreground"
+              onClick={handleDownloadTemplate}
+            >
+              <FileDown className="w-4 h-4" />
+              CSV Template
+            </Button>
             <input
               ref={fileInputRef}
               type="file"
