@@ -226,16 +226,55 @@ export const useCreateAgent = () => {
   });
 };
 
+// Helper to check if two time ranges overlap
+const timesOverlap = (start1: string, end1: string, start2: string, end2: string): boolean => {
+  // Handle overnight shifts (e.g. 22:00-06:00)
+  const toMinutes = (t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    return h * 60 + m;
+  };
+  const s1 = toMinutes(start1), e1 = toMinutes(end1);
+  const s2 = toMinutes(start2), e2 = toMinutes(end2);
+
+  // For overnight shifts, the end is "next day" so it's always < start
+  const isOvernight1 = e1 <= s1;
+  const isOvernight2 = e2 <= s2;
+
+  // Normalize to ranges within a 48h window
+  const ranges1 = isOvernight1 ? [[s1, e1 + 1440]] : [[s1, e1]];
+  const ranges2 = isOvernight2 ? [[s2, e2 + 1440]] : [[s2, e2]];
+
+  return ranges1.some(([a, b]) => ranges2.some(([c, d]) => a < d && c < b));
+};
+
+export { timesOverlap };
+
 export const useCreateSchedule = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (entry: { agent_id: string; shift_date: string; start_time: string; end_time: string; notes?: string }) => {
+      // Check for overlapping shifts on the same day
+      const { data: existing } = await supabase
+        .from("shift_schedule")
+        .select("id, start_time, end_time")
+        .eq("agent_id", entry.agent_id)
+        .eq("shift_date", entry.shift_date);
+
+      const conflict = (existing || []).find((s: any) =>
+        timesOverlap(entry.start_time, entry.end_time, s.start_time, s.end_time)
+      );
+
+      if (conflict) {
+        throw new Error(`Conflict: agent already scheduled ${conflict.start_time}–${conflict.end_time} on this day`);
+      }
+
       const { data, error } = await supabase.from("shift_schedule").insert(entry).select().single();
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["shift-schedule"] });
+      queryClient.invalidateQueries({ queryKey: ["week-schedule"] });
       toast.success("Shift scheduled");
     },
     onError: (err: Error) => {
