@@ -1369,6 +1369,7 @@ class TG400Agent {
       if (this.isRunning) {
         await this.syncConfigFromCloud();
         await this.syncAutoReplyConfig();
+        await this.syncCallAutoSmsConfig();
       }
     }, this.config.CONFIG_SYNC_INTERVAL));
 
