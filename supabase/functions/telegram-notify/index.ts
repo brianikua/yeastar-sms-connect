@@ -278,6 +278,79 @@ Deno.serve(async (req) => {
         });
       }
 
+    } else if (action === "weekly_rating_digest") {
+      // Get ratings from the past 7 days
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+      const [ratingsRes, agentsRes] = await Promise.all([
+        supabase.from("agent_ratings").select("*").gte("rating_date", weekAgo),
+        supabase.from("agents").select("id, name, telegram_chat_id").eq("is_active", true),
+      ]);
+
+      const ratings = ratingsRes.data || [];
+      const agents = agentsRes.data || [];
+      const agentMap = new Map(agents.map((a: any) => [a.id, a]));
+
+      // Aggregate per agent
+      const agentStats = new Map<string, { total: number; count: number; best: number; worst: number }>();
+      for (const r of ratings) {
+        const s = agentStats.get(r.agent_id) || { total: 0, count: 0, best: 0, worst: 6 };
+        s.total += r.rating;
+        s.count += 1;
+        s.best = Math.max(s.best, r.rating);
+        s.worst = Math.min(s.worst, r.rating);
+        agentStats.set(r.agent_id, s);
+      }
+
+      // Sort by average descending
+      const ranked = [...agentStats.entries()]
+        .map(([id, s]) => ({ id, avg: s.total / s.count, count: s.count, best: s.best, worst: s.worst }))
+        .sort((a, b) => b.avg - a.avg);
+
+      messageText = `📊 *WEEKLY PERFORMANCE DIGEST*\n\n`;
+      messageText += `_Ratings from ${escapeMarkdown(weekAgo)} to today_\n`;
+      messageText += `📝 Total ratings: ${ratings.length} across ${agentStats.size} agents\n\n`;
+
+      if (ranked.length === 0) {
+        messageText += `_No ratings submitted this week_`;
+      } else {
+        // Leaderboard
+        const medals = ["🥇", "🥈", "🥉"];
+        for (let i = 0; i < ranked.length; i++) {
+          const r = ranked[i];
+          const agent = agentMap.get(r.id);
+          const name = escapeMarkdown(agent?.name || "Unknown");
+          const medal = i < 3 ? medals[i] : `${i + 1}\\.`;
+          const avgStr = r.avg.toFixed(1);
+          const stars = "⭐".repeat(Math.round(r.avg));
+          messageText += `${medal} *${name}* — ${stars} ${escapeMarkdown(avgStr)}/5\n`;
+          messageText += `   ${r.count} ratings \\| Best: ${r.best} \\| Lowest: ${r.worst}\n\n`;
+        }
+
+        // Team average
+        const teamAvg = ratings.reduce((s: number, r: any) => s + r.rating, 0) / ratings.length;
+        messageText += `\n📈 *Team Average:* ${escapeMarkdown(teamAvg.toFixed(1))}/5`;
+      }
+
+      // Also send personal summaries to agents with Telegram configured
+      for (const [agentId, stats] of agentStats.entries()) {
+        const agent = agentMap.get(agentId);
+        if (!agent?.telegram_chat_id) continue;
+
+        const avg = stats.total / stats.count;
+        const personalMsg = `📊 *Your Weekly Rating Summary*\n\n`
+          + `${"⭐".repeat(Math.round(avg))} *${escapeMarkdown(avg.toFixed(1))}*/5 average\n`
+          + `📝 ${stats.count} rating\\(s\\) this week\n`
+          + `🏆 Best: ${stats.best}/5 \\| Lowest: ${stats.worst}/5\n\n`
+          + `_Keep pushing for excellence\\!_`;
+
+        await sendTelegram(TELEGRAM_BOT_TOKEN, {
+          chat_id: agent.telegram_chat_id,
+          text: personalMsg,
+          parse_mode: "MarkdownV2",
+        });
+      }
+
     } else {
       throw new Error(`Unknown action: ${action}`);
     }
