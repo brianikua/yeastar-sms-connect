@@ -9,9 +9,14 @@ export interface Agent {
   email: string | null;
   phone: string | null;
   extension: string | null;
+  telegram_chat_id: string | null;
   is_active: boolean;
   created_at: string;
 }
+
+const generatePin = () => {
+  return String(Math.floor(1000 + Math.random() * 9000));
+};
 
 export interface AgentShift {
   id: string;
