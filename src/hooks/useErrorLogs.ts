@@ -49,7 +49,8 @@ export const useErrorLogs = (limit = 50) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryClient]);
 
   const query = useQuery({
     queryKey: ["error-logs", limit],

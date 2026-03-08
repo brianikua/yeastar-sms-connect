@@ -46,7 +46,7 @@ export const useCallQueue = () => {
         "postgres_changes",
         { event: "*", schema: "public", table: "call_queue" },
         (payload) => {
-          query.refetch();
+          queryClient.invalidateQueries({ queryKey: ["call-queue"] });
           
           // Show toast for status updates
           if (payload.eventType === "UPDATE") {
@@ -66,7 +66,7 @@ export const useCallQueue = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [query]);
+  }, [queryClient]);
 
   return query;
 };
