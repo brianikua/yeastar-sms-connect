@@ -12,6 +12,7 @@ import { GatewaySettingsForm } from "./GatewaySettingsForm";
 import { PbxSettingsForm } from "./PbxSettingsForm";
 import { LocalAgentGuide } from "./LocalAgentGuide";
 import { AutoReplyPanel } from "./AutoReplyPanel";
+import { CallAutoSmsPanel } from "./CallAutoSmsPanel";
 import { NotificationSettingsPanel } from "./NotificationSettingsPanel";
 
 interface SimPortConfig {
