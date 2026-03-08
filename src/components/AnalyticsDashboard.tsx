@@ -305,6 +305,8 @@ export const AnalyticsDashboard = () => {
                       )}
                     </TableCell>
                     <TableCell className="text-center font-mono">{ext.smsCount}</TableCell>
+                    <TableCell className="text-center font-mono text-muted-foreground">{formatDuration(ext.totalTalkTime)}</TableCell>
+                    <TableCell className="text-center font-mono text-muted-foreground">{formatDuration(ext.avgTalkTime)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
