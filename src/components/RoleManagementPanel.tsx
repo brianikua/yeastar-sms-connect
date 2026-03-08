@@ -43,15 +43,16 @@ export const RoleManagementPanel = () => {
   const resetForm = () => {
     setEmail("");
     setFullName("");
+    setPassword("");
     setRole("operator");
     setPin(generatePin());
   };
 
   const handleCreate = async () => {
-    if (!email || !pin) return;
+    if (!email || !password || password.length < 6) return;
     await createUser.mutateAsync({
       email,
-      password: pin,
+      password,
       role,
       full_name: fullName,
     });
