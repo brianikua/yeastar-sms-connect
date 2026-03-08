@@ -134,7 +134,19 @@ export const RoleManagementPanel = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="user-pin">Initial Sign-in PIN</Label>
+                      <Label htmlFor="user-password">Password</Label>
+                      <Input
+                        id="user-password"
+                        type="password"
+                        placeholder="Min 6 characters"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        minLength={6}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="user-pin">Sign-in PIN</Label>
                       <div className="flex gap-2">
                         <div className="relative flex-1">
                           <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -143,7 +155,7 @@ export const RoleManagementPanel = () => {
                             className="pl-9 font-mono text-lg tracking-widest"
                             value={pin}
                             onChange={(e) => setPin(e.target.value)}
-                            maxLength={20}
+                            maxLength={10}
                             required
                           />
                         </div>
@@ -157,7 +169,7 @@ export const RoleManagementPanel = () => {
                         </Button>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        This PIN will be shown once. The user will use it as their password to sign in and can change it later.
+                        This PIN is for kiosk clock-in. The user signs in with email + password above and can change their PIN from their profile.
                       </p>
                     </div>
                     <div className="space-y-2">
