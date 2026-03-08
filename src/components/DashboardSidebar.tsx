@@ -159,6 +159,7 @@ export const DashboardSidebar = ({ activeTab, onTabChange }: DashboardSidebarPro
               onTabChange={onTabChange}
               collapsed={false}
               onItemClick={() => setMobileOpen(false)}
+              visibleItems={visibleItems}
             />
           </div>
         </SheetContent>
