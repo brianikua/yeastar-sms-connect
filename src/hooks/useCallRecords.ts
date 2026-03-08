@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
 
@@ -43,6 +43,8 @@ export const useCallRecords = () => {
     refetchInterval: 30000,
   });
 
+  const queryClient = useQueryClient();
+
   // Realtime subscription
   useEffect(() => {
     const channel = supabase
@@ -51,7 +53,7 @@ export const useCallRecords = () => {
         "postgres_changes",
         { event: "*", schema: "public", table: "call_records" },
         () => {
-          query.refetch();
+          queryClient.invalidateQueries({ queryKey: ["call-records"] });
         }
       )
       .subscribe();
@@ -59,7 +61,7 @@ export const useCallRecords = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [query]);
+  }, [queryClient]);
 
   return query;
 };

@@ -160,17 +160,26 @@ export const useClockIn = () => {
       const agentResult = result as unknown as { found: boolean; id: string; name: string; email: string | null; phone: string | null; extension: string | null; telegram_chat_id: string | null };
       if (!agentResult || !agentResult.found) throw new Error("Invalid PIN");
 
+      // Fetch the full agent record to get notification_channel
+      const { data: fullAgent, error: agentError } = await supabase
+        .from("agents")
+        .select("*")
+        .eq("id", agentResult.id)
+        .single();
+      
+      if (agentError) throw agentError;
+
       const agent: Agent = {
-        id: agentResult.id,
-        name: agentResult.name,
-        email: agentResult.email,
-        phone: agentResult.phone,
-        extension: agentResult.extension,
-        telegram_chat_id: agentResult.telegram_chat_id,
-        pin: "", // Not exposed by RPC
-        notification_channel: "telegram",
-        is_active: true,
-        created_at: "",
+        id: fullAgent.id,
+        name: fullAgent.name,
+        email: fullAgent.email,
+        phone: fullAgent.phone,
+        extension: fullAgent.extension,
+        telegram_chat_id: fullAgent.telegram_chat_id,
+        pin: "", // Not exposed
+        notification_channel: (fullAgent.notification_channel as Agent["notification_channel"]) || "telegram",
+        is_active: fullAgent.is_active,
+        created_at: fullAgent.created_at,
       };
 
       // Check if already clocked in
