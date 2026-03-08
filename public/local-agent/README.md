@@ -65,10 +65,27 @@ Edit `/opt/tg400-agent/config.json`:
   "TG400_PASSWORD": "your-password",
   "TG400_PORTS": [1, 2, 3, 4],
   "POLL_INTERVAL": 30000,
+  "SUPABASE_SERVICE_ROLE_KEY": "your-service-role-key-here",
   "GITHUB_REPO_URL": "https://github.com/your-user/your-repo.git",
   "REPO_DIR": "/opt/tg400-repo",
   "AUTO_UPDATE_ENABLED": true
 }
+```
+
+### SUPABASE_SERVICE_ROLE_KEY (Required)
+
+The agent requires the **service role key** to read from `agent_config` due to hardened RLS policies. Without it, cloud config sync will be skipped and the agent will run with local defaults only.
+
+You can find this key in your Lovable Cloud backend settings. The installer wizard will prompt for it during setup, or you can add it manually to `config.json` and the systemd service:
+
+```bash
+# Add to systemd environment
+sudo systemctl edit tg400-agent
+# Add: Environment=SUPABASE_SERVICE_ROLE_KEY=your-key-here
+sudo systemctl daemon-reload && sudo systemctl restart tg400-agent
+```
+
+> ⚠️ **Security**: The service role key bypasses RLS. Keep `config.json` permissions restricted (`chmod 600`).
 ```
 
 ### Git Auto-Update
