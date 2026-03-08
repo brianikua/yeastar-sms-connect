@@ -25,6 +25,7 @@ export type DashboardTab =
   | "insights"
   | "staff"
   | "roles"
+  | "profile"
   | "config";
 
 interface NavItem {
