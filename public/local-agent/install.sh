@@ -266,11 +266,13 @@ class TG400Agent {
   async syncConfigFromCloud() {
     try {
       const url = `${this.config.SUPABASE_URL}/rest/v1/agent_config?select=config_key,config_value`;
+      // agent_config requires service role key (RLS restricts anon access)
+      const authKey = this.config.SUPABASE_SERVICE_ROLE_KEY || this.config.SUPABASE_ANON_KEY;
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'apikey': this.config.SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${this.config.SUPABASE_ANON_KEY}`,
+          'apikey': authKey,
+          'Authorization': `Bearer ${authKey}`,
         },
       });
 
