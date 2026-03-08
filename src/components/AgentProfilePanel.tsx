@@ -148,6 +148,7 @@ export const AgentProfilePanel = () => {
     if (form.phone !== (selectedAgent.phone || "")) updates.phone = form.phone || undefined;
     if (form.extension !== (selectedAgent.extension || "")) updates.extension = form.extension || undefined;
     if (form.telegram_chat_id !== (selectedAgent.telegram_chat_id || "")) updates.telegram_chat_id = form.telegram_chat_id || undefined;
+    if (form.notification_channel !== (selectedAgent.notification_channel || "telegram")) updates.notification_channel = form.notification_channel;
 
     if (Object.keys(updates).length === 0) {
       toast.info("No changes to save");

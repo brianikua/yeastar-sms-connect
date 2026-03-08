@@ -10,6 +10,7 @@ export interface Agent {
   phone: string | null;
   extension: string | null;
   telegram_chat_id: string | null;
+  notification_channel: "telegram" | "email" | "both";
   is_active: boolean;
   created_at: string;
 }
