@@ -235,6 +235,7 @@ export const AgentShiftRating = () => {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
