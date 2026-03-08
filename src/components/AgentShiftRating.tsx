@@ -53,6 +53,16 @@ const useSubmitRating = () => {
         comment: input.comment?.trim() || null,
       });
       if (error) throw error;
+
+      // Send Telegram notification (fire and forget)
+      supabase.functions.invoke("telegram-notify", {
+        body: {
+          action: "rating_notification",
+          agent_id: input.agent_id,
+          rating: input.rating,
+          comment: input.comment?.trim() || null,
+        },
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["agent-ratings"] });
