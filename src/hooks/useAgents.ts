@@ -9,9 +9,14 @@ export interface Agent {
   email: string | null;
   phone: string | null;
   extension: string | null;
+  telegram_chat_id: string | null;
   is_active: boolean;
   created_at: string;
 }
+
+const generatePin = () => {
+  return String(Math.floor(1000 + Math.random() * 9000));
+};
 
 export interface AgentShift {
   id: string;
@@ -176,7 +181,7 @@ export const useClockIn = () => {
         if (error) throw error;
         // Send notification (fire and forget)
         supabase.functions.invoke("shift-notify", {
-          body: { action: "clock_out", agent_name: agent.name, agent_email: agent.email, clock_time: new Date().toISOString() },
+          body: { action: "clock_out", agent_name: agent.name, agent_email: agent.email, agent_id: agent.id, clock_time: new Date().toISOString() },
         });
         return { action: "clock_out" as const, agent };
       } else {
@@ -187,7 +192,7 @@ export const useClockIn = () => {
         if (error) throw error;
         // Send notification (fire and forget)
         supabase.functions.invoke("shift-notify", {
-          body: { action: "clock_in", agent_name: agent.name, agent_email: agent.email, clock_time: new Date().toISOString() },
+          body: { action: "clock_in", agent_name: agent.name, agent_email: agent.email, agent_id: agent.id, clock_time: new Date().toISOString() },
         });
         return { action: "clock_in" as const, agent };
       }
@@ -210,18 +215,38 @@ export const useClockIn = () => {
 export const useCreateAgent = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (agent: { name: string; pin: string; email?: string; phone?: string; extension?: string }) => {
-      const { data, error } = await supabase.from("agents").insert(agent).select().single();
+    mutationFn: async (agent: { name: string; email?: string; phone?: string; extension?: string; telegram_chat_id?: string }) => {
+      const pin = generatePin();
+      const { data, error } = await supabase.from("agents").insert({ ...agent, pin }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["agents"] });
+      queryClient.invalidateQueries({ queryKey: ["agents-all"] });
+      toast.success(`Agent created! PIN: ${data.pin}`, { duration: 10000 });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Failed to create agent");
+    },
+  });
+};
+
+export const useUpdateAgent = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; pin?: string; email?: string; phone?: string; extension?: string; telegram_chat_id?: string; name?: string }) => {
+      const { data, error } = await supabase.from("agents").update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["agents"] });
       queryClient.invalidateQueries({ queryKey: ["agents-all"] });
-      toast.success("Agent created");
+      toast.success("Agent updated");
     },
     onError: (err: Error) => {
-      toast.error(err.message || "Failed to create agent");
+      toast.error(err.message || "Failed to update agent");
     },
   });
 };
