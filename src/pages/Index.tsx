@@ -102,17 +102,12 @@ const Index = () => {
                 </div>
               </div>
 
-              {/* Messages and Logs Row */}
-              <div className="grid gap-6 lg:grid-cols-2">
+              {/* Messages Row */}
+              <div>
                 {messagesLoading ? (
                   <Skeleton className="h-[400px] rounded-lg" />
                 ) : (
                   <SmsInbox messages={messages} />
-                )}
-                {logsLoading ? (
-                  <Skeleton className="h-[300px] rounded-lg" />
-                ) : (
-                  <ActivityLog logs={logs} />
                 )}
               </div>
             </>
