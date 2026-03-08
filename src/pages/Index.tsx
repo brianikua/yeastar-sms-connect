@@ -28,7 +28,7 @@ const Index = () => {
   const simPorts = simData?.ports || [];
   const simConfigs = simData?.configs || [];
   const { data: messages = [], isLoading: messagesLoading } = useSmsMessages();
-  const { data: logs = [], isLoading: logsLoading } = useActivityLogs();
+  
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
 
   const handleRefresh = async () => {
