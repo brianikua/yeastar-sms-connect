@@ -181,7 +181,7 @@ serve(async (req) => {
 
         // On clock out, include a daily summary
         if (action === "clock_out") {
-          const { data: agent } = await supabase.from("agents").select("telegram_chat_id, email, extension").eq("id", agent_id).maybeSingle();
+          const { data: agent } = await supabase.from("agents").select("telegram_chat_id, email, extension, notification_channel").eq("id", agent_id).maybeSingle();
           if (agent?.extension) {
             const today = new Date().toISOString().split("T")[0];
             const { data: calls } = await supabase
