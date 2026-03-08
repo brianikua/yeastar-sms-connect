@@ -121,9 +121,9 @@ export const ShiftSwapPanel = () => {
   const statusBadge = (status: string) => {
     switch (status) {
       case "pending":
-        return <Badge variant="outline" className="text-yellow-600 border-yellow-600/50"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
+        return <Badge variant="outline" className="text-warning border-warning/50"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
       case "approved":
-        return <Badge className="bg-chart-2 text-white"><Check className="w-3 h-3 mr-1" />Approved</Badge>;
+        return <Badge className="bg-chart-2 text-primary-foreground"><Check className="w-3 h-3 mr-1" />Approved</Badge>;
       case "rejected":
         return <Badge variant="destructive"><X className="w-3 h-3 mr-1" />Rejected</Badge>;
       default:
