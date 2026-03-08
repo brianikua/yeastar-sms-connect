@@ -8,7 +8,6 @@ import {
   ChevronRight,
   Menu,
   X,
-  Clock,
   Shield,
 } from "lucide-react";
 import { usePendingSwapCount } from "@/hooks/useShiftSwap";
