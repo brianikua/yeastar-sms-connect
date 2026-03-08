@@ -10,6 +10,7 @@ import { CommunicationsPanel } from "@/components/CommunicationsPanel";
 import { InsightsPanel } from "@/components/InsightsPanel";
 import { StaffPanel } from "@/components/StaffPanel";
 import { RoleManagementPanel } from "@/components/RoleManagementPanel";
+import { UserProfilePanel } from "@/components/UserProfilePanel";
 import { DashboardSidebar, DashboardTab } from "@/components/DashboardSidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Server, Phone, Database } from "lucide-react";
