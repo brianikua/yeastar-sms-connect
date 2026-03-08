@@ -4,7 +4,7 @@ import { Header } from "@/components/Header";
 import { SimPortCard } from "@/components/SimPortCard";
 import { SystemStatusCard } from "@/components/SystemStatusCard";
 import { SmsInbox } from "@/components/SmsInbox";
-import { ActivityLog } from "@/components/ActivityLog";
+
 import { ConfigurationPanel } from "@/components/ConfigurationPanel";
 import { CommunicationsPanel } from "@/components/CommunicationsPanel";
 import { InsightsPanel } from "@/components/InsightsPanel";
