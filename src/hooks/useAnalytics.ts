@@ -26,6 +26,8 @@ export interface ExtensionBreakdown {
   missedCalls: number;
   calledBack: number;
   smsCount: number;
+  totalTalkTime: number;
+  avgTalkTime: number;
 }
 
 export interface AnalyticsData {
@@ -62,7 +64,7 @@ export const useAnalytics = (days: number = 7) => {
       // Fetch call records for the period
       const { data: callRecords } = await supabase
         .from("call_records")
-        .select("extension, sim_port, status, callback_attempted")
+        .select("extension, sim_port, status, callback_attempted, talk_duration")
         .gte("start_time", startDate.toISOString());
 
       // Build extension breakdown
@@ -78,6 +80,8 @@ export const useAnalytics = (days: number = 7) => {
           missedCalls: 0,
           calledBack: 0,
           smsCount: 0,
+          totalTalkTime: 0,
+          avgTalkTime: 0,
         });
       });
 
@@ -100,11 +104,21 @@ export const useAnalytics = (days: number = 7) => {
         if (ext && extMap.has(ext)) {
           const entry = extMap.get(ext)!;
           entry.totalCalls += 1;
-          if (cr.status === "answered") entry.answeredCalls += 1;
+          if (cr.status === "answered") {
+            entry.answeredCalls += 1;
+            entry.totalTalkTime += (cr.talk_duration || 0);
+          }
           if (cr.status === "missed") {
             entry.missedCalls += 1;
             if (cr.callback_attempted) entry.calledBack += 1;
           }
+        }
+      });
+
+      // Calculate averages
+      extMap.forEach((entry) => {
+        if (entry.answeredCalls > 0) {
+          entry.avgTalkTime = Math.round(entry.totalTalkTime / entry.answeredCalls);
         }
       });
 
