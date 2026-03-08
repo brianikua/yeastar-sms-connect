@@ -1692,6 +1692,9 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=tg400-agent
 
+# Load service role key from config at runtime
+Environment=SUPABASE_SERVICE_ROLE_KEY=
+
 # Hardening (allow git repo dir and /tmp for git)
 NoNewPrivileges=true
 ProtectSystem=strict
