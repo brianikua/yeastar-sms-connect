@@ -151,12 +151,23 @@ export const AgentShiftRating = () => {
             </CardTitle>
             <CardDescription className="text-xs mt-1">Rate agent performance after their shift</CardDescription>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-1.5">
-                <Star className="w-3.5 h-3.5" /> Rate Agent
-              </Button>
-            </DialogTrigger>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={() => sendDigest.mutate()}
+              disabled={sendDigest.isPending}
+            >
+              {sendDigest.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              Send Weekly Digest
+            </Button>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="gap-1.5">
+                  <Star className="w-3.5 h-3.5" /> Rate Agent
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Rate Agent Shift Performance</DialogTitle>
