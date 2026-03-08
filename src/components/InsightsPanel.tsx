@@ -54,7 +54,7 @@ export const InsightsPanel = () => {
         {active === "analytics" && <AnalyticsDashboard />}
         {active === "reports" && <MissedCallsReportPanel />}
         {active === "logs" && (
-          logsLoading ? <Skeleton className="h-[400px] rounded-lg" /> : <ActivityLog logs={logs} />
+          logsLoading ? <Skeleton className="h-[400px] rounded-lg" /> : <ActivityLog logs={logs} isStreaming={isStreaming} />
         )}
         {active === "ai" && (
           <div className="space-y-4">
