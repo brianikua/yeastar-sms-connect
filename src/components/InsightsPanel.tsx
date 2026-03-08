@@ -28,7 +28,7 @@ import {
   MessageSquareReply,
   Bell,
   Cpu,
-  Sim,
+  ScanLine,
 } from "lucide-react";
 
 type Section =
