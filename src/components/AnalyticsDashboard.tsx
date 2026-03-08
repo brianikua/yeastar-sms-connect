@@ -253,6 +253,63 @@ export const AnalyticsDashboard = () => {
           </div>
         </CardContent>
       </Card>
+      {/* Per-Extension Breakdown */}
+      {analytics.extensionBreakdown.length > 0 && (
+        <Card className="card-glow border-border/50 bg-card">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-chart-4/10">
+                <Phone className="w-4 h-4 text-chart-4" />
+              </div>
+              <CardTitle className="text-sm font-semibold">Per-Extension Breakdown (7 days)</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Extension</TableHead>
+                  <TableHead>Port</TableHead>
+                  <TableHead className="text-center">Calls</TableHead>
+                  <TableHead className="text-center">Answered</TableHead>
+                  <TableHead className="text-center">Missed</TableHead>
+                  <TableHead className="text-center">Called Back</TableHead>
+                  <TableHead className="text-center">SMS</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {analytics.extensionBreakdown.map((ext) => (
+                  <TableRow key={ext.extension}>
+                    <TableCell className="font-medium">
+                      <div>
+                        <span>{ext.extension}</span>
+                        {ext.label !== ext.extension && (
+                          <span className="ml-2 text-xs text-muted-foreground">{ext.label}</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="font-mono text-xs">P{ext.port}</Badge>
+                    </TableCell>
+                    <TableCell className="text-center font-mono">{ext.totalCalls}</TableCell>
+                    <TableCell className="text-center font-mono text-green-500">{ext.answeredCalls}</TableCell>
+                    <TableCell className="text-center font-mono text-red-500">{ext.missedCalls}</TableCell>
+                    <TableCell className="text-center">
+                      <span className="font-mono">{ext.calledBack}</span>
+                      {ext.missedCalls > 0 && (
+                        <span className="ml-1 text-xs text-muted-foreground">
+                          ({Math.round((ext.calledBack / ext.missedCalls) * 100)}%)
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center font-mono">{ext.smsCount}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
