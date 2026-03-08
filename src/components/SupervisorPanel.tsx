@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { WeeklyShiftPlanner } from "@/components/WeeklyShiftPlanner";
 import { ShiftSwapPanel } from "@/components/ShiftSwapPanel";
+import { AgentShiftRating } from "@/components/AgentShiftRating";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
