@@ -20,10 +20,10 @@ export const usePbxConfig = () => {
         .from("pbx_config")
         .select("*")
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      return data as PbxConfig;
+      return data as PbxConfig | null;
     },
   });
 

@@ -18,10 +18,10 @@ export const useGatewayConfig = () => {
         .from("gateway_config")
         .select("*")
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      return data as GatewayConfig;
+      return data as GatewayConfig | null;
     },
   });
 

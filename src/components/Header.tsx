@@ -38,6 +38,7 @@ export const Header = ({ systemStatus, lastSync, onRefresh }: HeaderProps) => {
   };
 
   const getRoleBadgeVariant = () => {
+    if (role === "super_admin") return "destructive";
     if (role === "admin") return "default";
     if (role === "operator") return "secondary";
     return "outline";
