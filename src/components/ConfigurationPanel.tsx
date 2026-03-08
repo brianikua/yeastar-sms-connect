@@ -248,6 +248,10 @@ export const ConfigurationPanel = ({
 
         <Separator className="my-4" />
 
+        <CallAutoSmsPanel />
+
+        <Separator className="my-4" />
+
         <NotificationSettingsPanel />
 
         <Separator className="my-4" />
