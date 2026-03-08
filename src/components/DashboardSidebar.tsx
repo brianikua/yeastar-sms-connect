@@ -16,6 +16,7 @@ import {
   Clock,
   Shield,
 } from "lucide-react";
+import { usePendingSwapCount } from "@/hooks/useShiftSwap";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
