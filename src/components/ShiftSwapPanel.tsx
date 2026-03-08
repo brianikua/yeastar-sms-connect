@@ -158,7 +158,7 @@ export const ShiftSwapPanel = () => {
               </h4>
               <div className="space-y-2">
                 {pendingRequests.map((req) => (
-                  <div key={req.id} className="flex items-center justify-between p-3 rounded-lg border border-yellow-500/30 bg-yellow-500/5">
+                  <div key={req.id} className="flex items-center justify-between p-3 rounded-lg border border-accent bg-accent/20">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 text-sm font-medium">
                         <span>{req.requester_agent?.name}</span>
