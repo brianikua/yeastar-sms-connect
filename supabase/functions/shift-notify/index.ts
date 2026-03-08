@@ -14,6 +14,28 @@ const sendTelegram = async (botToken: string, chatId: string, text: string) => {
   });
 };
 
+const sendEmail = async (resendApiKey: string, to: string[], subject: string, html: string) => {
+  if (!resendApiKey || to.length === 0) return;
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendApiKey}` },
+    body: JSON.stringify({
+      from: "Nosteq Call Center <info@nosteq.co.ke>",
+      to,
+      subject,
+      html,
+    }),
+  });
+};
+
+// Helper: try to notify an agent via Telegram; if no chat_id, queue email fallback
+interface AgentNotification {
+  agentId: string;
+  telegramText: string;
+  emailSubject: string;
+  emailHtml: string;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -35,6 +57,8 @@ serve(async (req) => {
     let emailHtml = "";
     let emailTo: string[] = [];
     let agentTelegramMessages: { chatId: string; text: string }[] = [];
+    // Personal agent notifications (Telegram preferred, email fallback)
+    let agentNotifications: AgentNotification[] = [];
 
     if (action === "reassign") {
       const { original_agent_name, original_agent_email, new_agent_name, new_agent_email, shift_date, start_time, end_time, reason } = body;
@@ -52,37 +76,42 @@ serve(async (req) => {
       if (original_agent_email) emailTo.push(original_agent_email);
       if (new_agent_email) emailTo.push(new_agent_email);
 
-      // Notify agents personally
       if (body.new_agent_id) {
-        const { data: newAgent } = await supabase.from("agents").select("telegram_chat_id").eq("id", body.new_agent_id).maybeSingle();
-        if (newAgent?.telegram_chat_id) {
-          agentTelegramMessages.push({ chatId: newAgent.telegram_chat_id, text: `📋 *You've been assigned a shift*\n📅 ${shift_date} · ${start_time}–${end_time}\n📝 ${reason}` });
-        }
+        agentNotifications.push({
+          agentId: body.new_agent_id,
+          telegramText: `📋 *You've been assigned a shift*\n📅 ${shift_date} · ${start_time}–${end_time}\n📝 ${reason}`,
+          emailSubject: `📋 You've been assigned a shift – ${shift_date}`,
+          emailHtml: `<h2>📋 Shift Assignment</h2><p>You've been assigned a shift on <strong>${shift_date}</strong> from <strong>${start_time}</strong> to <strong>${end_time}</strong>.</p><p>Reason: ${reason}</p>`,
+        });
       }
       if (body.original_agent_id) {
-        const { data: origAgent } = await supabase.from("agents").select("telegram_chat_id").eq("id", body.original_agent_id).maybeSingle();
-        if (origAgent?.telegram_chat_id) {
-          agentTelegramMessages.push({ chatId: origAgent.telegram_chat_id, text: `📋 *Your shift has been reassigned*\n📅 ${shift_date} · ${start_time}–${end_time}\n➡️ Assigned to ${new_agent_name}\n📝 ${reason}` });
-        }
+        agentNotifications.push({
+          agentId: body.original_agent_id,
+          telegramText: `📋 *Your shift has been reassigned*\n📅 ${shift_date} · ${start_time}–${end_time}\n➡️ Assigned to ${new_agent_name}\n📝 ${reason}`,
+          emailSubject: `📋 Your shift has been reassigned – ${shift_date}`,
+          emailHtml: `<h2>📋 Shift Reassigned</h2><p>Your shift on <strong>${shift_date}</strong> (${start_time}–${end_time}) has been reassigned to <strong>${new_agent_name}</strong>.</p><p>Reason: ${reason}</p>`,
+        });
       }
 
     } else if (action === "swap_request") {
       const { requester_name, requester_agent_id, target_name, target_agent_id, requester_shift_date, requester_shift_time, target_shift_date, target_shift_time, reason } = body;
       telegramMessage = `🔀 *Shift Swap Request*\n\n*${requester_name}* wants to swap with *${target_name}*\n\n📅 ${requester_name}: ${requester_shift_date} ${requester_shift_time}\n📅 ${target_name}: ${target_shift_date} ${target_shift_time}\n📝 Reason: _${reason}_\n\n⏳ Pending supervisor approval`;
 
-      // Notify target agent about the incoming swap request
       if (target_agent_id) {
-        const { data: tgtAgent } = await supabase.from("agents").select("telegram_chat_id").eq("id", target_agent_id).maybeSingle();
-        if (tgtAgent?.telegram_chat_id) {
-          agentTelegramMessages.push({ chatId: tgtAgent.telegram_chat_id, text: `🔀 *Swap Request*\n\n*${requester_name}* wants to swap shifts with you.\n\n📅 Your shift: ${target_shift_date} ${target_shift_time}\n📅 Their shift: ${requester_shift_date} ${requester_shift_time}\n📝 Reason: _${reason}_\n\n⏳ Awaiting supervisor approval` });
-        }
+        agentNotifications.push({
+          agentId: target_agent_id,
+          telegramText: `🔀 *Swap Request*\n\n*${requester_name}* wants to swap shifts with you.\n\n📅 Your shift: ${target_shift_date} ${target_shift_time}\n📅 Their shift: ${requester_shift_date} ${requester_shift_time}\n📝 Reason: _${reason}_\n\n⏳ Awaiting supervisor approval`,
+          emailSubject: `🔀 Shift Swap Request from ${requester_name}`,
+          emailHtml: `<h2>🔀 Shift Swap Request</h2><p><strong>${requester_name}</strong> wants to swap shifts with you.</p><table style="border-collapse:collapse;margin:16px 0;"><tr><td style="padding:4px 12px;font-weight:bold;">Your shift</td><td style="padding:4px 12px;">${target_shift_date} ${target_shift_time}</td></tr><tr><td style="padding:4px 12px;font-weight:bold;">Their shift</td><td style="padding:4px 12px;">${requester_shift_date} ${requester_shift_time}</td></tr><tr><td style="padding:4px 12px;font-weight:bold;">Reason</td><td style="padding:4px 12px;">${reason}</td></tr></table><p>⏳ Awaiting supervisor approval.</p>`,
+        });
       }
-      // Notify requester that their request was submitted
       if (requester_agent_id) {
-        const { data: reqAgent } = await supabase.from("agents").select("telegram_chat_id").eq("id", requester_agent_id).maybeSingle();
-        if (reqAgent?.telegram_chat_id) {
-          agentTelegramMessages.push({ chatId: reqAgent.telegram_chat_id, text: `📤 *Swap Request Submitted*\n\nYour request to swap with *${target_name}* has been submitted.\n\n📅 Your shift: ${requester_shift_date} ${requester_shift_time}\n📅 Their shift: ${target_shift_date} ${target_shift_time}\n\n⏳ Waiting for supervisor approval` });
-        }
+        agentNotifications.push({
+          agentId: requester_agent_id,
+          telegramText: `📤 *Swap Request Submitted*\n\nYour request to swap with *${target_name}* has been submitted.\n\n📅 Your shift: ${requester_shift_date} ${requester_shift_time}\n📅 Their shift: ${target_shift_date} ${target_shift_time}\n\n⏳ Waiting for supervisor approval`,
+          emailSubject: `📤 Swap Request Submitted`,
+          emailHtml: `<h2>📤 Swap Request Submitted</h2><p>Your request to swap shifts with <strong>${target_name}</strong> has been submitted.</p><table style="border-collapse:collapse;margin:16px 0;"><tr><td style="padding:4px 12px;font-weight:bold;">Your shift</td><td style="padding:4px 12px;">${requester_shift_date} ${requester_shift_time}</td></tr><tr><td style="padding:4px 12px;font-weight:bold;">Their shift</td><td style="padding:4px 12px;">${target_shift_date} ${target_shift_time}</td></tr></table><p>⏳ Waiting for supervisor approval.</p>`,
+        });
       }
 
     } else if (action === "swap_approved") {
@@ -93,18 +122,21 @@ serve(async (req) => {
       if (requester_email) emailTo.push(requester_email);
       if (target_email) emailTo.push(target_email);
 
-      // Notify both agents personally
       if (requester_agent_id) {
-        const { data: reqAgent } = await supabase.from("agents").select("telegram_chat_id").eq("id", requester_agent_id).maybeSingle();
-        if (reqAgent?.telegram_chat_id) {
-          agentTelegramMessages.push({ chatId: reqAgent.telegram_chat_id, text: `✅ *Swap Approved!*\n\nYour shift swap with *${target_name}* has been approved.\n\n📅 You now work: ${target_shift_date} ${target_shift_time}` });
-        }
+        agentNotifications.push({
+          agentId: requester_agent_id,
+          telegramText: `✅ *Swap Approved!*\n\nYour shift swap with *${target_name}* has been approved.\n\n📅 You now work: ${target_shift_date} ${target_shift_time}`,
+          emailSubject: `✅ Shift Swap Approved`,
+          emailHtml: `<h2>✅ Swap Approved!</h2><p>Your shift swap with <strong>${target_name}</strong> has been approved.</p><p>📅 You now work: <strong>${target_shift_date} ${target_shift_time}</strong></p>`,
+        });
       }
       if (target_agent_id) {
-        const { data: tgtAgent } = await supabase.from("agents").select("telegram_chat_id").eq("id", target_agent_id).maybeSingle();
-        if (tgtAgent?.telegram_chat_id) {
-          agentTelegramMessages.push({ chatId: tgtAgent.telegram_chat_id, text: `✅ *Swap Approved!*\n\nYour shift swap with *${requester_name}* has been approved.\n\n📅 You now work: ${requester_shift_date} ${requester_shift_time}` });
-        }
+        agentNotifications.push({
+          agentId: target_agent_id,
+          telegramText: `✅ *Swap Approved!*\n\nYour shift swap with *${requester_name}* has been approved.\n\n📅 You now work: ${requester_shift_date} ${requester_shift_time}`,
+          emailSubject: `✅ Shift Swap Approved`,
+          emailHtml: `<h2>✅ Swap Approved!</h2><p>Your shift swap with <strong>${requester_name}</strong> has been approved.</p><p>📅 You now work: <strong>${requester_shift_date} ${requester_shift_time}</strong></p>`,
+        });
       }
 
     } else if (action === "swap_rejected") {
@@ -115,18 +147,21 @@ serve(async (req) => {
       if (requester_email) emailTo.push(requester_email);
       if (target_email) emailTo.push(target_email);
 
-      // Notify both agents personally
       if (requester_agent_id) {
-        const { data: reqAgent } = await supabase.from("agents").select("telegram_chat_id").eq("id", requester_agent_id).maybeSingle();
-        if (reqAgent?.telegram_chat_id) {
-          agentTelegramMessages.push({ chatId: reqAgent.telegram_chat_id, text: `❌ *Swap Rejected*\n\nYour shift swap with *${target_name}* was rejected.${review_note ? `\n💬 Note: _${review_note}_` : ""}` });
-        }
+        agentNotifications.push({
+          agentId: requester_agent_id,
+          telegramText: `❌ *Swap Rejected*\n\nYour shift swap with *${target_name}* was rejected.${review_note ? `\n💬 Note: _${review_note}_` : ""}`,
+          emailSubject: `❌ Shift Swap Rejected`,
+          emailHtml: `<h2>❌ Swap Rejected</h2><p>Your shift swap with <strong>${target_name}</strong> was rejected.</p>${review_note ? `<p>💬 Supervisor note: ${review_note}</p>` : ""}`,
+        });
       }
       if (target_agent_id) {
-        const { data: tgtAgent } = await supabase.from("agents").select("telegram_chat_id").eq("id", target_agent_id).maybeSingle();
-        if (tgtAgent?.telegram_chat_id) {
-          agentTelegramMessages.push({ chatId: tgtAgent.telegram_chat_id, text: `❌ *Swap Rejected*\n\nThe shift swap between you and *${requester_name}* was rejected.${review_note ? `\n💬 Note: _${review_note}_` : ""}` });
-        }
+        agentNotifications.push({
+          agentId: target_agent_id,
+          telegramText: `❌ *Swap Rejected*\n\nThe shift swap between you and *${requester_name}* was rejected.${review_note ? `\n💬 Note: _${review_note}_` : ""}`,
+          emailSubject: `❌ Shift Swap Rejected`,
+          emailHtml: `<h2>❌ Swap Rejected</h2><p>The shift swap between you and <strong>${requester_name}</strong> was rejected.</p>${review_note ? `<p>💬 Supervisor note: ${review_note}</p>` : ""}`,
+        });
       }
 
     } else if (action === "clock_in" || action === "clock_out") {
@@ -140,14 +175,14 @@ serve(async (req) => {
       emailHtml = `<h2>${emoji} Shift ${action === "clock_in" ? "Started" : "Ended"}</h2><p><strong>${agent_name}</strong> has ${verb} at <strong>${formattedTime}</strong></p>`;
       if (agent_email) emailTo.push(agent_email);
 
-      // Send personal notification to agent
       if (agent_id) {
-        const { data: agent } = await supabase.from("agents").select("telegram_chat_id, extension").eq("id", agent_id).maybeSingle();
-        if (agent?.telegram_chat_id) {
-          let personalMsg = `${emoji} You have ${verb} at ${formattedTime}`;
+        let personalTelegramMsg = `${emoji} You have ${verb} at ${formattedTime}`;
+        let personalEmailHtml = `<h2>${emoji} Shift ${action === "clock_in" ? "Started" : "Ended"}</h2><p>You have ${verb} at <strong>${formattedTime}</strong>.</p>`;
 
-          // On clock out, include a daily summary
-          if (action === "clock_out" && agent.extension) {
+        // On clock out, include a daily summary
+        if (action === "clock_out") {
+          const { data: agent } = await supabase.from("agents").select("telegram_chat_id, email, extension").eq("id", agent_id).maybeSingle();
+          if (agent?.extension) {
             const today = new Date().toISOString().split("T")[0];
             const { data: calls } = await supabase
               .from("call_records")
@@ -170,24 +205,39 @@ serve(async (req) => {
             const callbacks = (calls || []).filter((c: any) => c.callback_attempted).length;
             const totalSms = (smsData || []).length;
 
-            personalMsg += `\n\n📊 *Your Daily Report*\n` +
+            const reportSuffix = `\n\n📊 *Your Daily Report*\n` +
               `📞 Calls: ${totalCalls} (${inbound}↙ ${outbound}↗)\n` +
               `✅ Answered: ${answered} | ❌ Missed: ${missed}\n` +
               `📲 Callbacks: ${callbacks}\n` +
               `⏱ Talk time: ${talkMin}m\n` +
               `💬 SMS received: ${totalSms}`;
+            personalTelegramMsg += reportSuffix;
+            personalEmailHtml += `<h3>📊 Your Daily Report</h3><table style="border-collapse:collapse;margin:8px 0;"><tr><td style="padding:2px 8px;">📞 Calls</td><td style="padding:2px 8px;">${totalCalls} (${inbound}↙ ${outbound}↗)</td></tr><tr><td style="padding:2px 8px;">✅ Answered</td><td style="padding:2px 8px;">${answered}</td></tr><tr><td style="padding:2px 8px;">❌ Missed</td><td style="padding:2px 8px;">${missed}</td></tr><tr><td style="padding:2px 8px;">📲 Callbacks</td><td style="padding:2px 8px;">${callbacks}</td></tr><tr><td style="padding:2px 8px;">⏱ Talk time</td><td style="padding:2px 8px;">${talkMin}m</td></tr><tr><td style="padding:2px 8px;">💬 SMS</td><td style="padding:2px 8px;">${totalSms}</td></tr></table>`;
           }
-          agentTelegramMessages.push({ chatId: agent.telegram_chat_id, text: personalMsg });
+
+          // For clock_out, we already fetched the agent — send directly
+          if (agent?.telegram_chat_id && telegramBotToken) {
+            agentTelegramMessages.push({ chatId: agent.telegram_chat_id, text: personalTelegramMsg });
+          } else if (agent?.email && resendApiKey) {
+            await sendEmail(resendApiKey, [agent.email], `${emoji} Shift Ended – Daily Report`, personalEmailHtml);
+          }
+        } else {
+          // clock_in — use the unified notification system
+          agentNotifications.push({
+            agentId: agent_id,
+            telegramText: personalTelegramMsg,
+            emailSubject: `${emoji} Shift Started`,
+            emailHtml: personalEmailHtml,
+          });
         }
       }
 
     } else if (action === "agent_daily_report") {
-      // Triggered manually or by cron — sends each agent their personal report
       const today = new Date().toISOString().split("T")[0];
-      const { data: agents } = await supabase.from("agents").select("*").eq("is_active", true).not("telegram_chat_id", "is", null);
+      const { data: agents } = await supabase.from("agents").select("*").eq("is_active", true);
 
       for (const agent of agents || []) {
-        if (!agent.telegram_chat_id || !agent.extension) continue;
+        if (!agent.extension) continue;
 
         const { data: calls } = await supabase
           .from("call_records")
@@ -217,7 +267,7 @@ serve(async (req) => {
           shiftTime += (end.getTime() - start.getTime()) / 60000;
         });
 
-        const msg = `📊 *Daily Report — ${agent.name}*\n📅 ${today}\n\n` +
+        const telegramMsg = `📊 *Daily Report — ${agent.name}*\n📅 ${today}\n\n` +
           `⏰ Shift time: ${Math.floor(shiftTime / 60)}h ${Math.round(shiftTime % 60)}m\n` +
           `📞 Total calls: ${totalCalls} (${inbound}↙ ${outbound}↗)\n` +
           `✅ Answered: ${answered}\n❌ Missed: ${missed}\n` +
@@ -225,9 +275,15 @@ serve(async (req) => {
           `⏱ Talk time: ${talkH}h ${talkM}m\n` +
           `${missed > 0 ? `\n⚠️ You have ${missed} missed call${missed > 1 ? "s" : ""} — please follow up!` : "✨ Great job — no missed calls!"}`;
 
-        agentTelegramMessages.push({ chatId: agent.telegram_chat_id, text: msg });
+        const emailBody = `<h2>📊 Daily Report — ${agent.name}</h2><p>📅 ${today}</p><table style="border-collapse:collapse;margin:8px 0;"><tr><td style="padding:2px 8px;">⏰ Shift time</td><td style="padding:2px 8px;">${Math.floor(shiftTime / 60)}h ${Math.round(shiftTime % 60)}m</td></tr><tr><td style="padding:2px 8px;">📞 Calls</td><td style="padding:2px 8px;">${totalCalls} (${inbound}↙ ${outbound}↗)</td></tr><tr><td style="padding:2px 8px;">✅ Answered</td><td style="padding:2px 8px;">${answered}</td></tr><tr><td style="padding:2px 8px;">❌ Missed</td><td style="padding:2px 8px;">${missed}</td></tr><tr><td style="padding:2px 8px;">⏱ Talk time</td><td style="padding:2px 8px;">${talkH}h ${talkM}m</td></tr></table>${missed > 0 ? `<p>⚠️ You have ${missed} missed call${missed > 1 ? "s" : ""} — please follow up!</p>` : "<p>✨ Great job — no missed calls!</p>"}`;
+
+        if (agent.telegram_chat_id && telegramBotToken) {
+          agentTelegramMessages.push({ chatId: agent.telegram_chat_id, text: telegramMsg });
+        } else if (agent.email && resendApiKey) {
+          await sendEmail(resendApiKey, [agent.email], `📊 Daily Report — ${agent.name}`, emailBody);
+        }
       }
-      telegramMessage = `📊 Daily agent reports sent to ${(agents || []).filter(a => a.telegram_chat_id && a.extension).length} agents`;
+      telegramMessage = `📊 Daily agent reports sent to ${(agents || []).length} agents`;
     }
 
     // Send to supervisor Telegram channel
@@ -235,28 +291,50 @@ serve(async (req) => {
       await sendTelegram(telegramBotToken, telegramChatId, telegramMessage);
     }
 
-    // Send personal Telegram to each agent
+    // Send personal Telegram to each agent (legacy direct pushes)
     if (telegramBotToken && agentTelegramMessages.length > 0) {
       await Promise.all(
         agentTelegramMessages.map((m) => sendTelegram(telegramBotToken, m.chatId, m.text))
       );
     }
 
-    // Send email
-    if (resendApiKey && emailTo.length > 0 && emailSubject) {
-      await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendApiKey}` },
-        body: JSON.stringify({
-          from: "Nosteq Call Center <info@nosteq.co.ke>",
-          to: emailTo,
-          subject: emailSubject,
-          html: emailHtml,
-        }),
-      });
+    // Process unified agent notifications: Telegram if available, email fallback
+    let emailFallbackCount = 0;
+    if (agentNotifications.length > 0) {
+      const agentIds = [...new Set(agentNotifications.map((n) => n.agentId))];
+      const { data: agentsData } = await supabase
+        .from("agents")
+        .select("id, telegram_chat_id, email")
+        .in("id", agentIds);
+
+      const agentMap = new Map((agentsData || []).map((a: any) => [a.id, a]));
+
+      for (const notification of agentNotifications) {
+        const agent = agentMap.get(notification.agentId);
+        if (!agent) continue;
+
+        if (agent.telegram_chat_id && telegramBotToken) {
+          // Send via Telegram
+          await sendTelegram(telegramBotToken, agent.telegram_chat_id, notification.telegramText);
+        } else if (agent.email && resendApiKey) {
+          // Fallback to email
+          await sendEmail(resendApiKey, [agent.email], notification.emailSubject, notification.emailHtml);
+          emailFallbackCount++;
+        }
+      }
     }
 
-    return new Response(JSON.stringify({ success: true, agent_notifications: agentTelegramMessages.length }), {
+    // Send supervisor/broadcast email (non-agent-specific)
+    if (resendApiKey && emailTo.length > 0 && emailSubject) {
+      await sendEmail(resendApiKey, emailTo, emailSubject, emailHtml);
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      agent_telegram: agentTelegramMessages.length,
+      agent_notifications: agentNotifications.length,
+      email_fallbacks: emailFallbackCount,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
