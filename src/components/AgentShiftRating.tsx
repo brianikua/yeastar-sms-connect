@@ -94,6 +94,17 @@ export const AgentShiftRating = () => {
   const { data: agents = [] } = useAgents();
   const { data: ratings = [], isLoading } = useAgentRatings();
   const submitRating = useSubmitRating();
+  const sendDigest = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("telegram-notify", {
+        body: { action: "weekly_rating_digest" },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => toast.success("Weekly digest sent to Telegram"),
+    onError: (err: Error) => toast.error("Failed to send digest: " + err.message),
+  });
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState("");
