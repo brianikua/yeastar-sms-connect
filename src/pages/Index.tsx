@@ -4,7 +4,7 @@ import { Header } from "@/components/Header";
 import { SimPortCard } from "@/components/SimPortCard";
 import { SystemStatusCard } from "@/components/SystemStatusCard";
 import { SmsInbox } from "@/components/SmsInbox";
-import { ActivityLog } from "@/components/ActivityLog";
+
 import { ConfigurationPanel } from "@/components/ConfigurationPanel";
 import { CommunicationsPanel } from "@/components/CommunicationsPanel";
 import { InsightsPanel } from "@/components/InsightsPanel";
@@ -16,7 +16,7 @@ import { Server, Phone, Database } from "lucide-react";
 import { toast } from "sonner";
 import { useSimPorts } from "@/hooks/useSimPorts";
 import { useSmsMessages } from "@/hooks/useSmsMessages";
-import { useActivityLogs } from "@/hooks/useActivityLogs";
+
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 
 const Index = () => {
@@ -28,7 +28,7 @@ const Index = () => {
   const simPorts = simData?.ports || [];
   const simConfigs = simData?.configs || [];
   const { data: messages = [], isLoading: messagesLoading } = useSmsMessages();
-  const { data: logs = [], isLoading: logsLoading } = useActivityLogs();
+  
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
 
   const handleRefresh = async () => {
@@ -102,17 +102,12 @@ const Index = () => {
                 </div>
               </div>
 
-              {/* Messages and Logs Row */}
-              <div className="grid gap-6 lg:grid-cols-2">
+              {/* Messages Row */}
+              <div>
                 {messagesLoading ? (
                   <Skeleton className="h-[400px] rounded-lg" />
                 ) : (
                   <SmsInbox messages={messages} />
-                )}
-                {logsLoading ? (
-                  <Skeleton className="h-[300px] rounded-lg" />
-                ) : (
-                  <ActivityLog logs={logs} />
                 )}
               </div>
             </>
