@@ -93,7 +93,7 @@ const NavItems = ({
             {!collapsed && <span className="truncate">{item.label}</span>}
             {badge > 0 && (
               <span className={cn(
-                "flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold min-w-[18px] h-[18px] px-1",
+                "flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold min-w-[18px] h-[18px] px-1 animate-pulse",
                 collapsed ? "absolute -top-1 -right-1" : "ml-auto"
               )}>
                 {badge > 99 ? "99+" : badge}
