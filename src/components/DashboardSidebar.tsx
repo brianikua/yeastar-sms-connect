@@ -4,7 +4,6 @@ import {
   PhoneCall,
   BarChart3,
   Settings,
-  Users,
   ChevronLeft,
   ChevronRight,
   Menu,
@@ -21,10 +20,9 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 export type DashboardTab =
   | "dashboard"
-  | "calls"
+  | "comms"
   | "insights"
   | "config"
-  | "contacts"
   | "kiosk"
   | "supervisor";
 
@@ -36,9 +34,8 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "calls", label: "Calls", icon: PhoneCall },
+  { id: "comms", label: "Calls & Contacts", icon: PhoneCall },
   { id: "insights", label: "Insights", icon: BarChart3 },
-  { id: "contacts", label: "Contacts", icon: Users },
   { id: "kiosk", label: "Clock In/Out", icon: Clock },
   { id: "supervisor", label: "Supervisor", icon: Shield },
   { id: "config", label: "Configuration", icon: Settings },

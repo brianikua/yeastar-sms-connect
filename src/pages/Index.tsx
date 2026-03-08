@@ -6,11 +6,7 @@ import { SystemStatusCard } from "@/components/SystemStatusCard";
 import { SmsInbox } from "@/components/SmsInbox";
 import { ActivityLog } from "@/components/ActivityLog";
 import { ConfigurationPanel } from "@/components/ConfigurationPanel";
-import { CallRecordsTable } from "@/components/CallRecordsTable";
-import { CallStatsCards } from "@/components/CallStatsCards";
-import { QuickDialWidget } from "@/components/QuickDialWidget";
-import { CallQueueStatus } from "@/components/CallQueueStatus";
-import { ContactsPanel } from "@/components/ContactsPanel";
+import { CommunicationsPanel } from "@/components/CommunicationsPanel";
 import { InsightsPanel } from "@/components/InsightsPanel";
 import { ClockInKiosk } from "@/components/ClockInKiosk";
 import { SupervisorPanel } from "@/components/SupervisorPanel";
@@ -22,7 +18,6 @@ import { useSimPorts } from "@/hooks/useSimPorts";
 import { useSmsMessages } from "@/hooks/useSmsMessages";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
-import { useCallRecords, useCallStats } from "@/hooks/useCallRecords";
 
 const Index = () => {
   const queryClient = useQueryClient();
@@ -35,8 +30,6 @@ const Index = () => {
   const { data: messages = [], isLoading: messagesLoading } = useSmsMessages();
   const { data: logs = [], isLoading: logsLoading } = useActivityLogs();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
-  const { data: calls = [], isLoading: callsLoading } = useCallRecords();
-  const { data: callStats, isLoading: callStatsLoading } = useCallStats();
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries();
@@ -125,20 +118,7 @@ const Index = () => {
             </>
           )}
 
-          {activeTab === "calls" && (
-            <>
-              <CallStatsCards stats={callStats} isLoading={callStatsLoading} />
-              <div className="grid gap-6 lg:grid-cols-3">
-                <div className="lg:col-span-2">
-                  <CallRecordsTable calls={calls} isLoading={callsLoading} />
-                </div>
-                <div className="space-y-6">
-                  <QuickDialWidget />
-                  <CallQueueStatus />
-                </div>
-              </div>
-            </>
-          )}
+          {activeTab === "comms" && <CommunicationsPanel />}
 
           {activeTab === "insights" && <InsightsPanel />}
 
@@ -151,8 +131,6 @@ const Index = () => {
               }}
             />
           )}
-
-          {activeTab === "contacts" && <ContactsPanel />}
 
           {activeTab === "kiosk" && <ClockInKiosk />}
 
