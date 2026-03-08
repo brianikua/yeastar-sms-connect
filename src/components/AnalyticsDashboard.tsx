@@ -1,4 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   BarChart,
@@ -13,7 +15,7 @@ import {
   AreaChart,
   Area,
 } from "recharts";
-import { BarChart3, PieChartIcon, Clock, TrendingUp, MessageSquare, Zap } from "lucide-react";
+import { BarChart3, PieChartIcon, Clock, TrendingUp, MessageSquare, Zap, Phone } from "lucide-react";
 import { useAnalytics } from "@/hooks/useAnalytics";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))"];
