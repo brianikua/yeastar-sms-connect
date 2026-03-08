@@ -30,8 +30,6 @@ const Index = () => {
   const { data: messages = [], isLoading: messagesLoading } = useSmsMessages();
   const { data: logs = [], isLoading: logsLoading } = useActivityLogs();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
-  const { data: calls = [], isLoading: callsLoading } = useCallRecords();
-  const { data: callStats, isLoading: callStatsLoading } = useCallStats();
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries();
