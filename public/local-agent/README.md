@@ -129,6 +129,39 @@ sudo chown -R root:root /opt/tg400-agent
 sudo chmod 600 /opt/tg400-agent/config.json
 ```
 
+### Service role key errors (agent_config sync)
+
+**Symptom**: Logs show `Config sync skipped` or `403 Forbidden` when reading `agent_config`.
+
+```bash
+# 1. Verify the key is set in config.json
+sudo cat /opt/tg400-agent/config.json | grep SERVICE_ROLE
+
+# 2. Check the systemd environment
+sudo systemctl show tg400-agent | grep Environment
+
+# 3. Test the key manually
+curl -s -o /dev/null -w "%{http_code}" \
+  -H "apikey: YOUR_SERVICE_ROLE_KEY" \
+  -H "Authorization: Bearer YOUR_SERVICE_ROLE_KEY" \
+  "https://aougsyziktukjvkmglzb.supabase.co/rest/v1/agent_config?select=config_key&limit=1"
+# Should return 200. If 401 → key is invalid. If 403 → key is anon, not service role.
+```
+
+**Common causes & fixes:**
+
+| Problem | Fix |
+|---------|-----|
+| Key is empty or missing | Re-run `sudo tg400-config` and enter the service role key |
+| Key is the anon key (starts with `eyJ...role":"anon"`) | Replace with the **service role** key from Lovable Cloud |
+| Key has trailing whitespace | Edit `config.json` and trim the value |
+| Systemd not picking up new config | Run `sudo systemctl daemon-reload && tg400-restart` |
+| Agent runs but config sync silently fails | Check logs: `tg400-logs \| grep -i config` |
+
+**Symptom**: Agent starts but uses default settings instead of cloud config.
+
+This is expected when the service role key is missing — the agent falls back to local defaults. To restore cloud sync, add a valid service role key and restart.
+
 ## Uninstallation
 
 ```bash
