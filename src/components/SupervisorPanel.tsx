@@ -80,11 +80,12 @@ export const SupervisorPanel = () => {
             <DialogHeader><DialogTitle>Add New Agent</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <div><Label>Name *</Label><Input value={newAgent.name} onChange={(e) => setNewAgent({ ...newAgent, name: e.target.value })} /></div>
-              <div><Label>PIN * (4-6 digits)</Label><Input value={newAgent.pin} onChange={(e) => setNewAgent({ ...newAgent, pin: e.target.value.replace(/\D/g, "").slice(0, 6) })} maxLength={6} /></div>
               <div><Label>Email</Label><Input type="email" value={newAgent.email} onChange={(e) => setNewAgent({ ...newAgent, email: e.target.value })} /></div>
               <div><Label>Phone</Label><Input value={newAgent.phone} onChange={(e) => setNewAgent({ ...newAgent, phone: e.target.value })} /></div>
               <div><Label>Extension</Label><Input value={newAgent.extension} onChange={(e) => setNewAgent({ ...newAgent, extension: e.target.value })} placeholder="e.g. 8001" /></div>
-              <Button onClick={handleCreateAgent} disabled={createAgent.isPending || !newAgent.name || !newAgent.pin}>Create Agent</Button>
+              <div><Label>Telegram Chat ID</Label><Input value={newAgent.telegram_chat_id} onChange={(e) => setNewAgent({ ...newAgent, telegram_chat_id: e.target.value })} placeholder="For personal notifications" /></div>
+              <p className="text-xs text-muted-foreground">PIN will be auto-generated and shown after creation</p>
+              <Button onClick={handleCreateAgent} disabled={createAgent.isPending || !newAgent.name}>Create Agent</Button>
             </div>
           </DialogContent>
         </Dialog>
