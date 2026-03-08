@@ -60,17 +60,19 @@ const NavItems = ({
   onTabChange,
   collapsed,
   onItemClick,
+  visibleItems,
 }: {
   activeTab: DashboardTab;
   onTabChange: (tab: DashboardTab) => void;
   collapsed: boolean;
   onItemClick?: () => void;
+  visibleItems: NavItem[];
 }) => {
   const { data: pendingCount = 0 } = usePendingSwapCount();
 
   return (
     <nav className="flex-1 flex flex-col gap-1 px-2">
-      {navItems.map((item) => {
+      {visibleItems.map((item) => {
         const isActive = activeTab === item.id;
         const badge = item.id === "staff" && pendingCount > 0 ? pendingCount : 0;
         const button = (
