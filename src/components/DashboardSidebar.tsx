@@ -41,14 +41,10 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "calls", label: "Calls", icon: PhoneCall },
-  { id: "reports", label: "Reports", icon: ClipboardList },
-  { id: "analytics", label: "Analytics", icon: BarChart3 },
+  { id: "insights", label: "Insights", icon: BarChart3 },
+  { id: "contacts", label: "Contacts", icon: Users },
   { id: "kiosk", label: "Clock In/Out", icon: Clock },
   { id: "supervisor", label: "Supervisor", icon: Shield },
-  { id: "logs", label: "Logs", icon: FileText },
-  { id: "contacts", label: "Contacts", icon: Users },
-  { id: "telegram", label: "Telegram", icon: Send },
-  { id: "ai", label: "AI & Diagnostics", icon: Brain },
   { id: "config", label: "Configuration", icon: Settings },
 ];
 
