@@ -335,6 +335,9 @@ export const SupervisorPanel = () => {
       {/* Weekly Shift Planner */}
       <WeeklyShiftPlanner />
 
+      {/* Agent Shift Ratings */}
+      <AgentShiftRating />
+
       {/* Shift Swap Requests */}
       <ShiftSwapPanel />
     </div>
