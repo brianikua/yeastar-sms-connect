@@ -104,11 +104,21 @@ export const useAnalytics = (days: number = 7) => {
         if (ext && extMap.has(ext)) {
           const entry = extMap.get(ext)!;
           entry.totalCalls += 1;
-          if (cr.status === "answered") entry.answeredCalls += 1;
+          if (cr.status === "answered") {
+            entry.answeredCalls += 1;
+            entry.totalTalkTime += (cr.talk_duration || 0);
+          }
           if (cr.status === "missed") {
             entry.missedCalls += 1;
             if (cr.callback_attempted) entry.calledBack += 1;
           }
+        }
+      });
+
+      // Calculate averages
+      extMap.forEach((entry) => {
+        if (entry.answeredCalls > 0) {
+          entry.avgTalkTime = Math.round(entry.totalTalkTime / entry.answeredCalls);
         }
       });
 
