@@ -1,0 +1,1 @@
+ALTER TABLE public.agents ADD COLUMN notification_channel text NOT NULL DEFAULT 'telegram' CHECK (notification_channel IN ('telegram', 'email', 'both'));
