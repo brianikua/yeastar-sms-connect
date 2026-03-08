@@ -134,25 +134,25 @@ export const ConfigurationPanel = ({
       <CardContent className="pt-2">
         <Tabs defaultValue="sim-ports" className="w-full">
           <TabsList className="w-full grid grid-cols-5 h-9">
-            <TabsTrigger value="sim-ports" className="gap-1.5 text-xs px-2">
-              <Cpu className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">SIM Ports</span>
+            <TabsTrigger value="sim-ports" className="gap-1 text-[11px] px-1.5">
+              <Cpu className="w-3.5 h-3.5 shrink-0" />
+              SIM
             </TabsTrigger>
-            <TabsTrigger value="connectivity" className="gap-1.5 text-xs px-2">
-              <Server className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Connectivity</span>
+            <TabsTrigger value="connectivity" className="gap-1 text-[11px] px-1.5">
+              <Server className="w-3.5 h-3.5 shrink-0" />
+              Network
             </TabsTrigger>
-            <TabsTrigger value="messaging" className="gap-1.5 text-xs px-2">
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Messaging</span>
+            <TabsTrigger value="messaging" className="gap-1 text-[11px] px-1.5">
+              <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+              SMS
             </TabsTrigger>
-            <TabsTrigger value="notifications" className="gap-1.5 text-xs px-2">
-              <Bell className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Alerts</span>
+            <TabsTrigger value="notifications" className="gap-1 text-[11px] px-1.5">
+              <Bell className="w-3.5 h-3.5 shrink-0" />
+              Alerts
             </TabsTrigger>
-            <TabsTrigger value="agent" className="gap-1.5 text-xs px-2">
-              <Terminal className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Agent</span>
+            <TabsTrigger value="agent" className="gap-1 text-[11px] px-1.5">
+              <Terminal className="w-3.5 h-3.5 shrink-0" />
+              Agent
             </TabsTrigger>
           </TabsList>
 
