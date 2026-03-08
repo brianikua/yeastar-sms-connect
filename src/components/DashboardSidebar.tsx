@@ -21,10 +21,9 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 export type DashboardTab =
   | "dashboard"
-  | "calls"
+  | "comms"
   | "insights"
   | "config"
-  | "contacts"
   | "kiosk"
   | "supervisor";
 
