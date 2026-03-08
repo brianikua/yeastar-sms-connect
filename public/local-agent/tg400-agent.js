@@ -73,7 +73,7 @@ const CONFIG = {
   
   // Agent Identity
   AGENT_ID: process.env.AGENT_ID || `agent-${crypto.randomBytes(4).toString('hex')}`,
-  VERSION: '4.3.0',
+  VERSION: '4.4.0',
 };
 // ========================================
 
