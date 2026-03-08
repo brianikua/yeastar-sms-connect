@@ -201,6 +201,162 @@ class TG400Agent {
     }
   }
 
+  // ========== CALL AUTO-SMS CONFIG ==========
+
+  async syncCallAutoSmsConfig() {
+    try {
+      const url = `${this.config.SUPABASE_URL}/rest/v1/call_autosms_config?select=enabled,answered_message,missed_message&limit=1`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'apikey': this.config.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${this.config.SUPABASE_ANON_KEY}`,
+        },
+      });
+
+      if (!response.ok) {
+        this.log('warn', `Failed to fetch call auto-SMS config: HTTP ${response.status}`);
+        return;
+      }
+
+      const rows = await response.json();
+      if (rows && rows.length > 0) {
+        const cfg = rows[0];
+        const wasEnabled = this.callAutoSmsConfig.enabled;
+        this.callAutoSmsConfig = {
+          enabled: cfg.enabled === true,
+          answered_message: cfg.answered_message || this.callAutoSmsConfig.answered_message,
+          missed_message: cfg.missed_message || this.callAutoSmsConfig.missed_message,
+        };
+        if (wasEnabled !== this.callAutoSmsConfig.enabled) {
+          this.log('info', `Call auto-SMS ${this.callAutoSmsConfig.enabled ? 'ENABLED' : 'DISABLED'}`);
+        }
+      }
+    } catch (error) {
+      this.log('warn', `Failed to sync call auto-SMS config: ${error.message}`);
+    }
+  }
+
+  // ========== CALL AUTO-SMS SENDING ==========
+
+  async sendCallAutoSms(callerNumber, callStatus, simPort) {
+    if (!this.callAutoSmsConfig.enabled) return;
+    if (!callerNumber || callerNumber === 'Unknown') return;
+
+    // Determine which message to send based on call status
+    let smsText;
+    let eventType;
+    if (callStatus === 'answered') {
+      smsText = this.callAutoSmsConfig.answered_message;
+      eventType = 'call_autosms_answered';
+    } else if (callStatus === 'missed' || callStatus === 'busy' || callStatus === 'failed') {
+      smsText = this.callAutoSmsConfig.missed_message;
+      eventType = 'call_autosms_missed';
+    } else {
+      return; // Don't send for other statuses (voicemail, internal, etc.)
+    }
+
+    // Only send for inbound calls (client calling us)
+    this.log('info', `Sending call auto-SMS (${callStatus}) to ${callerNumber}`);
+
+    // Use the same SMS sending logic as auto-reply
+    const port = simPort || this.config.TG400_PORTS[0] || 1;
+    const endpoints = [
+      `/api/v1.0/sms/send`,
+      `/cgi-bin/api-send_sms`,
+      `/api/sms/send`,
+    ];
+
+    // Try JSON body
+    for (const endpoint of endpoints) {
+      try {
+        const url = `http://${this.config.TG400_IP}${endpoint}`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${this.authHeader}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            port,
+            to: callerNumber,
+            number: callerNumber,
+            message: smsText,
+            text: smsText,
+            content: smsText,
+          }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeout);
+
+        if (response.ok) {
+          this.log('success', `Call auto-SMS (${callStatus}) sent to ${callerNumber} via port ${port}`);
+          await this.pushToSupabase('activity_logs', {
+            event_type: eventType,
+            message: `Call auto-SMS (${callStatus}) sent to ${callerNumber} on SIM port ${port}`,
+            severity: 'info',
+            sim_port: port,
+            metadata: {
+              source: 'local-agent',
+              agent_id: this.config.AGENT_ID,
+              to: callerNumber,
+              call_status: callStatus,
+              sms_preview: smsText.substring(0, 50),
+            },
+          });
+          return true;
+        }
+      } catch (error) {
+        // Try next endpoint
+      }
+    }
+
+    // Fallback: form-encoded
+    for (const endpoint of endpoints) {
+      try {
+        const url = `http://${this.config.TG400_IP}${endpoint}`;
+        const params = new URLSearchParams({ port: String(port), to: callerNumber, message: smsText });
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${this.authHeader}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: params.toString(),
+        });
+
+        if (response.ok) {
+          this.log('success', `Call auto-SMS (${callStatus}, form-encoded) sent to ${callerNumber} via port ${port}`);
+          await this.pushToSupabase('activity_logs', {
+            event_type: eventType,
+            message: `Call auto-SMS (${callStatus}) sent to ${callerNumber} on SIM port ${port}`,
+            severity: 'info',
+            sim_port: port,
+            metadata: { source: 'local-agent', agent_id: this.config.AGENT_ID, to: callerNumber, call_status: callStatus },
+          });
+          return true;
+        }
+      } catch (error) {
+        // Try next
+      }
+    }
+
+    this.log('warn', `Failed to send call auto-SMS (${callStatus}) to ${callerNumber}`);
+    await this.pushToSupabase('activity_logs', {
+      event_type: 'call_autosms_failed',
+      message: `Call auto-SMS (${callStatus}) failed for ${callerNumber} on SIM port ${port}`,
+      severity: 'warning',
+      sim_port: port,
+      metadata: { source: 'local-agent', agent_id: this.config.AGENT_ID, call_status: callStatus },
+    });
+    return false;
+  }
+
   // ========== SMS AUTO-REPLY ==========
 
   async sendSmsReply(toNumber, port) {
