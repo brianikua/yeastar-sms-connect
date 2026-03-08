@@ -31,7 +31,7 @@ const sections: SectionItem[] = [
 
 export const InsightsPanel = () => {
   const [active, setActive] = useState<Section>("analytics");
-  const { data: logs = [], isLoading: logsLoading } = useActivityLogs();
+  const { data: logs = [], isLoading: logsLoading, isStreaming } = useActivityLogs();
 
   return (
     <div className="space-y-4">
@@ -54,7 +54,7 @@ export const InsightsPanel = () => {
         {active === "analytics" && <AnalyticsDashboard />}
         {active === "reports" && <MissedCallsReportPanel />}
         {active === "logs" && (
-          logsLoading ? <Skeleton className="h-[400px] rounded-lg" /> : <ActivityLog logs={logs} />
+          logsLoading ? <Skeleton className="h-[400px] rounded-lg" /> : <ActivityLog logs={logs} isStreaming={isStreaming} />
         )}
         {active === "ai" && (
           <div className="space-y-4">

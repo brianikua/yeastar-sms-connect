@@ -1,19 +1,22 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FileText, CheckCircle, AlertCircle, Info, XCircle } from "lucide-react";
+import { FileText, CheckCircle, AlertCircle, Info, XCircle, Radio } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface LogEntry {
   id: string;
   timestamp: string;
   level: "info" | "success" | "warning" | "error";
   message: string;
+  isNew?: boolean;
 }
 
 interface ActivityLogProps {
   logs: LogEntry[];
+  isStreaming?: boolean;
 }
 
-export const ActivityLog = ({ logs }: ActivityLogProps) => {
+export const ActivityLog = ({ logs, isStreaming = false }: ActivityLogProps) => {
   const getLogIcon = (level: LogEntry["level"]) => {
     switch (level) {
       case "success":
@@ -30,11 +33,19 @@ export const ActivityLog = ({ logs }: ActivityLogProps) => {
   return (
     <Card className="card-glow border-border/50 bg-card h-full">
       <CardHeader className="pb-3">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-            <FileText className="w-5 h-5 text-primary" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+              <FileText className="w-5 h-5 text-primary" />
+            </div>
+            <CardTitle className="text-base font-semibold">Activity Log</CardTitle>
           </div>
-          <CardTitle className="text-base font-semibold">Activity Log</CardTitle>
+          {isStreaming && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Radio className="w-3 h-3 text-success animate-pulse" />
+              <span>Live</span>
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent className="p-0">
@@ -43,7 +54,10 @@ export const ActivityLog = ({ logs }: ActivityLogProps) => {
             {logs.map((log) => (
               <div
                 key={log.id}
-                className="px-4 py-3 hover:bg-muted/20 transition-colors"
+                className={cn(
+                  "px-4 py-3 hover:bg-muted/20 transition-all duration-500",
+                  log.isNew && "bg-primary/5 animate-in fade-in slide-in-from-top-2"
+                )}
               >
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5">{getLogIcon(log.level)}</div>
