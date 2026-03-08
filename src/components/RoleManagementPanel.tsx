@@ -36,6 +36,7 @@ export const RoleManagementPanel = () => {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
+  const [password, setPassword] = useState("");
   const [role, setRole] = useState<AppRole>("operator");
   const [pin, setPin] = useState(generatePin());
 
