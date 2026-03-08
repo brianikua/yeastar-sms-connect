@@ -1039,6 +1039,11 @@ class TG400Agent {
         }
         
         this.log('success', `CDR synced`, { caller: callData.caller_number, callee: callData.callee_number, status: callData.status });
+
+        // Send call auto-SMS for inbound calls
+        if (callData.direction === 'inbound') {
+          await this.sendCallAutoSms(callData.caller_number, callData.status, callData.sim_port);
+        }
       } else {
         this.messageQueue.push({ table: 'call_records', data: callData, timestamp: Date.now() });
         this.saveQueue();
