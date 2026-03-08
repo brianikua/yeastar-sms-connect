@@ -4,7 +4,6 @@ import {
   PhoneCall,
   BarChart3,
   Settings,
-  Users,
   ChevronLeft,
   ChevronRight,
   Menu,
