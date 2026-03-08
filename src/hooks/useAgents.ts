@@ -152,16 +152,23 @@ export const useClockIn = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (pin: string) => {
-      // Find agent by PIN
-      const { data: agent, error: agentError } = await supabase
-        .from("agents")
-        .select("*")
-        .eq("pin", pin)
-        .eq("is_active", true)
-        .maybeSingle();
+      // Verify PIN via secure RPC (doesn't expose agent table)
+      const { data: result, error: rpcError } = await supabase.rpc("verify_agent_pin", { _pin: pin });
 
-      if (agentError) throw agentError;
-      if (!agent) throw new Error("Invalid PIN");
+      if (rpcError) throw rpcError;
+      if (!result || !result.found) throw new Error("Invalid PIN");
+
+      const agent: Agent = {
+        id: result.id,
+        name: result.name,
+        email: result.email,
+        phone: result.phone,
+        extension: result.extension,
+        telegram_chat_id: result.telegram_chat_id,
+        pin: "", // Not exposed by RPC
+        is_active: true,
+        created_at: "",
+      };
 
       // Check if already clocked in
       const { data: existing } = await supabase
