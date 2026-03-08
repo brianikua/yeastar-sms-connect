@@ -12,6 +12,7 @@ import { GatewaySettingsForm } from "./GatewaySettingsForm";
 import { PbxSettingsForm } from "./PbxSettingsForm";
 import { LocalAgentGuide } from "./LocalAgentGuide";
 import { AutoReplyPanel } from "./AutoReplyPanel";
+import { NotificationSettingsPanel } from "./NotificationSettingsPanel";
 
 interface SimPortConfig {
   id: string;
@@ -243,6 +244,10 @@ export const ConfigurationPanel = ({
         <Separator className="my-4" />
 
         <AutoReplyPanel />
+
+        <Separator className="my-4" />
+
+        <NotificationSettingsPanel />
 
         <Separator className="my-4" />
 
