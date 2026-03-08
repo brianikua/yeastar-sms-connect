@@ -198,6 +198,7 @@ const CONFIG = {
   // Supabase Settings
   SUPABASE_URL: fileConfig.SUPABASE_URL || process.env.SUPABASE_URL || 'https://aougsyziktukjvkmglzb.supabase.co',
   SUPABASE_ANON_KEY: fileConfig.SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvdWdzeXppa3R1a2p2a21nbHpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkzNDg5NTYsImV4cCI6MjA4NDkyNDk1Nn0.dcsZwEJXND9xdNA1dR-uHH7r6WylGwL7xVKJSFL_C44',
+  SUPABASE_SERVICE_ROLE_KEY: fileConfig.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '',
   
   // Agent Settings
   POLL_INTERVAL: parseInt(fileConfig.POLL_INTERVAL || process.env.POLL_INTERVAL || '30000', 10),
