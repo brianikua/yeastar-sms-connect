@@ -5,7 +5,6 @@ import { SimPortCard } from "@/components/SimPortCard";
 import { SystemStatusCard } from "@/components/SystemStatusCard";
 import { SmsInbox } from "@/components/SmsInbox";
 import { ActivityLog } from "@/components/ActivityLog";
-import { ConfigurationPanel } from "@/components/ConfigurationPanel";
 import { CommunicationsPanel } from "@/components/CommunicationsPanel";
 import { InsightsPanel } from "@/components/InsightsPanel";
 import { StaffPanel } from "@/components/StaffPanel";
@@ -120,15 +119,11 @@ const Index = () => {
 
           {activeTab === "comms" && <CommunicationsPanel />}
 
-          {activeTab === "insights" && <InsightsPanel />}
-
-          {activeTab === "config" && (
-            <ConfigurationPanel
-              simPorts={simConfigs}
-              isLoading={simLoading}
-              onConfigSaved={() => {
-                queryClient.invalidateQueries({ queryKey: ["sim-ports"] });
-              }}
+          {activeTab === "insights" && (
+            <InsightsPanel
+              simConfigs={simConfigs}
+              simLoading={simLoading}
+              onConfigSaved={() => queryClient.invalidateQueries({ queryKey: ["sim-ports"] })}
             />
           )}
 
