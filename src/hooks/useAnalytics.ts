@@ -64,7 +64,7 @@ export const useAnalytics = (days: number = 7) => {
       // Fetch call records for the period
       const { data: callRecords } = await supabase
         .from("call_records")
-        .select("extension, sim_port, status, callback_attempted")
+        .select("extension, sim_port, status, callback_attempted, talk_duration")
         .gte("start_time", startDate.toISOString());
 
       // Build extension breakdown
