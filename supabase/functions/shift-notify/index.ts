@@ -67,24 +67,67 @@ serve(async (req) => {
       }
 
     } else if (action === "swap_request") {
-      const { requester_name, target_name, requester_shift_date, requester_shift_time, target_shift_date, target_shift_time, reason } = body;
+      const { requester_name, requester_agent_id, target_name, target_agent_id, requester_shift_date, requester_shift_time, target_shift_date, target_shift_time, reason } = body;
       telegramMessage = `🔀 *Shift Swap Request*\n\n*${requester_name}* wants to swap with *${target_name}*\n\n📅 ${requester_name}: ${requester_shift_date} ${requester_shift_time}\n📅 ${target_name}: ${target_shift_date} ${target_shift_time}\n📝 Reason: _${reason}_\n\n⏳ Pending supervisor approval`;
 
+      // Notify target agent about the incoming swap request
+      if (target_agent_id) {
+        const { data: tgtAgent } = await supabase.from("agents").select("telegram_chat_id").eq("id", target_agent_id).maybeSingle();
+        if (tgtAgent?.telegram_chat_id) {
+          agentTelegramMessages.push({ chatId: tgtAgent.telegram_chat_id, text: `🔀 *Swap Request*\n\n*${requester_name}* wants to swap shifts with you.\n\n📅 Your shift: ${target_shift_date} ${target_shift_time}\n📅 Their shift: ${requester_shift_date} ${requester_shift_time}\n📝 Reason: _${reason}_\n\n⏳ Awaiting supervisor approval` });
+        }
+      }
+      // Notify requester that their request was submitted
+      if (requester_agent_id) {
+        const { data: reqAgent } = await supabase.from("agents").select("telegram_chat_id").eq("id", requester_agent_id).maybeSingle();
+        if (reqAgent?.telegram_chat_id) {
+          agentTelegramMessages.push({ chatId: reqAgent.telegram_chat_id, text: `📤 *Swap Request Submitted*\n\nYour request to swap with *${target_name}* has been submitted.\n\n📅 Your shift: ${requester_shift_date} ${requester_shift_time}\n📅 Their shift: ${target_shift_date} ${target_shift_time}\n\n⏳ Waiting for supervisor approval` });
+        }
+      }
+
     } else if (action === "swap_approved") {
-      const { requester_name, requester_email, target_name, target_email, requester_shift_date, requester_shift_time, target_shift_date, target_shift_time, reason } = body;
+      const { requester_name, requester_email, requester_agent_id, target_name, target_email, target_agent_id, requester_shift_date, requester_shift_time, target_shift_date, target_shift_time, reason } = body;
       telegramMessage = `✅ *Shift Swap Approved*\n\n*${requester_name}* ↔ *${target_name}*\n\n📅 ${requester_name} now works: ${target_shift_date} ${target_shift_time}\n📅 ${target_name} now works: ${requester_shift_date} ${requester_shift_time}\n📝 Reason: _${reason}_`;
       emailSubject = `✅ Shift Swap Approved`;
       emailHtml = `<h2>✅ Shift Swap Approved</h2><p>Swap between <strong>${requester_name}</strong> and <strong>${target_name}</strong> has been approved.</p>`;
       if (requester_email) emailTo.push(requester_email);
       if (target_email) emailTo.push(target_email);
 
+      // Notify both agents personally
+      if (requester_agent_id) {
+        const { data: reqAgent } = await supabase.from("agents").select("telegram_chat_id").eq("id", requester_agent_id).maybeSingle();
+        if (reqAgent?.telegram_chat_id) {
+          agentTelegramMessages.push({ chatId: reqAgent.telegram_chat_id, text: `✅ *Swap Approved!*\n\nYour shift swap with *${target_name}* has been approved.\n\n📅 You now work: ${target_shift_date} ${target_shift_time}` });
+        }
+      }
+      if (target_agent_id) {
+        const { data: tgtAgent } = await supabase.from("agents").select("telegram_chat_id").eq("id", target_agent_id).maybeSingle();
+        if (tgtAgent?.telegram_chat_id) {
+          agentTelegramMessages.push({ chatId: tgtAgent.telegram_chat_id, text: `✅ *Swap Approved!*\n\nYour shift swap with *${requester_name}* has been approved.\n\n📅 You now work: ${requester_shift_date} ${requester_shift_time}` });
+        }
+      }
+
     } else if (action === "swap_rejected") {
-      const { requester_name, requester_email, target_name, target_email, reason, review_note } = body;
+      const { requester_name, requester_email, requester_agent_id, target_name, target_email, target_agent_id, reason, review_note } = body;
       telegramMessage = `❌ *Shift Swap Rejected*\n\n*${requester_name}* ↔ *${target_name}*\n📝 Reason: _${reason}_${review_note ? `\n💬 Supervisor note: _${review_note}_` : ""}`;
       emailSubject = `❌ Shift Swap Rejected`;
       emailHtml = `<h2>❌ Shift Swap Rejected</h2><p>Swap between <strong>${requester_name}</strong> and <strong>${target_name}</strong> was rejected.</p>${review_note ? `<p>Note: ${review_note}</p>` : ""}`;
       if (requester_email) emailTo.push(requester_email);
       if (target_email) emailTo.push(target_email);
+
+      // Notify both agents personally
+      if (requester_agent_id) {
+        const { data: reqAgent } = await supabase.from("agents").select("telegram_chat_id").eq("id", requester_agent_id).maybeSingle();
+        if (reqAgent?.telegram_chat_id) {
+          agentTelegramMessages.push({ chatId: reqAgent.telegram_chat_id, text: `❌ *Swap Rejected*\n\nYour shift swap with *${target_name}* was rejected.${review_note ? `\n💬 Note: _${review_note}_` : ""}` });
+        }
+      }
+      if (target_agent_id) {
+        const { data: tgtAgent } = await supabase.from("agents").select("telegram_chat_id").eq("id", target_agent_id).maybeSingle();
+        if (tgtAgent?.telegram_chat_id) {
+          agentTelegramMessages.push({ chatId: tgtAgent.telegram_chat_id, text: `❌ *Swap Rejected*\n\nThe shift swap between you and *${requester_name}* was rejected.${review_note ? `\n💬 Note: _${review_note}_` : ""}` });
+        }
+      }
 
     } else if (action === "clock_in" || action === "clock_out") {
       const { agent_name, agent_email, agent_id, clock_time } = body;
