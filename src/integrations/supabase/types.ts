@@ -886,6 +886,7 @@ export type Database = {
       }
       is_authorized: { Args: { _user_id: string }; Returns: boolean }
       merge_duplicate_contacts: { Args: never; Returns: Json }
+      verify_agent_pin: { Args: { _pin: string }; Returns: Json }
     }
     Enums: {
       app_role: "super_admin" | "admin" | "operator" | "viewer"
