@@ -292,8 +292,8 @@ export const AnalyticsDashboard = () => {
                       <Badge variant="outline" className="font-mono text-xs">P{ext.port}</Badge>
                     </TableCell>
                     <TableCell className="text-center font-mono">{ext.totalCalls}</TableCell>
-                    <TableCell className="text-center font-mono text-green-500">{ext.answeredCalls}</TableCell>
-                    <TableCell className="text-center font-mono text-red-500">{ext.missedCalls}</TableCell>
+                    <TableCell className="text-center font-mono text-chart-2">{ext.answeredCalls}</TableCell>
+                    <TableCell className="text-center font-mono text-destructive">{ext.missedCalls}</TableCell>
                     <TableCell className="text-center">
                       <span className="font-mono">{ext.calledBack}</span>
                       {ext.missedCalls > 0 && (
