@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.fetch-google-contacts]
 verify_jwt = false
+
+[functions.shift-reminder]
+verify_jwt = false
