@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * TG400 Local Polling Agent v4.3 - Call Auto-SMS
+ * TG400 Local Polling Agent v4.4 - Service Role Key for Config
  * 
  * Features:
  * - Persistent state file (survives restarts)
@@ -43,6 +43,7 @@ const CONFIG = {
   // Supabase Settings
   SUPABASE_URL: process.env.SUPABASE_URL || 'https://aougsyziktukjvkmglzb.supabase.co',
   SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvdWdzeXppa3R1a2p2a21nbHpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkzNDg5NTYsImV4cCI6MjA4NDkyNDk1Nn0.dcsZwEJXND9xdNA1dR-uHH7r6WylGwL7xVKJSFL_C44',
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '', // Required for agent_config access
   
   // Agent Settings (defaults, can be overridden by cloud config)
   POLL_INTERVAL: parseInt(process.env.POLL_INTERVAL || '30000', 10),
@@ -72,7 +73,7 @@ const CONFIG = {
   
   // Agent Identity
   AGENT_ID: process.env.AGENT_ID || `agent-${crypto.randomBytes(4).toString('hex')}`,
-  VERSION: '4.3.0',
+  VERSION: '4.4.0',
 };
 // ========================================
 
@@ -126,12 +127,14 @@ class TG400Agent {
 
   async syncConfigFromCloud() {
     try {
+      // agent_config requires service role key (RLS restricts anon writes)
+      const authKey = this.config.SUPABASE_SERVICE_ROLE_KEY || this.config.SUPABASE_ANON_KEY;
       const url = `${this.config.SUPABASE_URL}/rest/v1/agent_config?select=config_key,config_value`;
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'apikey': this.config.SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${this.config.SUPABASE_ANON_KEY}`,
+          'apikey': authKey,
+          'Authorization': `Bearer ${authKey}`,
         },
       });
 
@@ -1781,7 +1784,8 @@ Environment Variables:
   PBX_USERNAME          PBX API username (default: admin)
   PBX_PASSWORD          PBX API password
   SUPABASE_URL          Supabase project URL
-  SUPABASE_ANON_KEY     Supabase anonymous key
+   SUPABASE_ANON_KEY     Supabase anonymous key
+  SUPABASE_SERVICE_ROLE_KEY  Supabase service role key (required for agent_config access)
   POLL_INTERVAL         SMS polling interval in ms (default: 30000)
   CDR_POLL_INTERVAL     CDR polling interval in ms (default: 60000)
   AGENT_ID              Unique agent identifier (auto-generated if not set)
