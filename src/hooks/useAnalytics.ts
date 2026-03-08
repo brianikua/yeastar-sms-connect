@@ -54,6 +54,62 @@ export const useAnalytics = (days: number = 7) => {
 
       if (error) throw error;
 
+      // Fetch sim port config for extension mapping
+      const { data: portConfigs } = await supabase
+        .from("sim_port_config")
+        .select("port_number, extension, label");
+
+      // Fetch call records for the period
+      const { data: callRecords } = await supabase
+        .from("call_records")
+        .select("extension, sim_port, status, callback_attempted")
+        .gte("start_time", startDate.toISOString());
+
+      // Build extension breakdown
+      const extMap = new Map<string, ExtensionBreakdown>();
+      (portConfigs || []).forEach((pc) => {
+        const ext = pc.extension || `Port ${pc.port_number}`;
+        extMap.set(ext, {
+          extension: ext,
+          label: pc.label || ext,
+          port: pc.port_number,
+          totalCalls: 0,
+          answeredCalls: 0,
+          missedCalls: 0,
+          calledBack: 0,
+          smsCount: 0,
+        });
+      });
+
+      // Count SMS per extension (via sim_port -> extension mapping)
+      const portToExt = new Map<number, string>();
+      (portConfigs || []).forEach((pc) => {
+        portToExt.set(pc.port_number, pc.extension || `Port ${pc.port_number}`);
+      });
+
+      (messages || []).forEach((msg) => {
+        const ext = portToExt.get(msg.sim_port);
+        if (ext && extMap.has(ext)) {
+          extMap.get(ext)!.smsCount += 1;
+        }
+      });
+
+      // Count calls per extension
+      (callRecords || []).forEach((cr) => {
+        const ext = cr.extension || (cr.sim_port ? portToExt.get(cr.sim_port) : null);
+        if (ext && extMap.has(ext)) {
+          const entry = extMap.get(ext)!;
+          entry.totalCalls += 1;
+          if (cr.status === "answered") entry.answeredCalls += 1;
+          if (cr.status === "missed") {
+            entry.missedCalls += 1;
+            if (cr.callback_attempted) entry.calledBack += 1;
+          }
+        }
+      });
+
+      const extensionBreakdown = Array.from(extMap.values()).sort((a, b) => a.port - b.port);
+
       // Process daily message counts
       const dailyMap = new Map<string, number>();
       for (let i = 0; i < days; i++) {
