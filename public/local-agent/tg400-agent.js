@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * TG400 Local Polling Agent v4.2 - Auto-Reply SMS
+ * TG400 Local Polling Agent v4.3 - Call Auto-SMS
  * 
  * Features:
  * - Persistent state file (survives restarts)
@@ -15,6 +15,7 @@
  * - AUTO-UPDATE: Checks for new versions and self-updates
  * - PREDICTIVE MAINTENANCE: AI predicts issues before they happen
  * - AUTO-REPLY SMS: Reads auto_reply_config from cloud and sends reply on each new SMS
+ * - CALL AUTO-SMS: Sends different SMS to callers after answered vs missed calls
  * 
  * Installation: See /local-agent/install.sh
  */
@@ -71,7 +72,7 @@ const CONFIG = {
   
   // Agent Identity
   AGENT_ID: process.env.AGENT_ID || `agent-${crypto.randomBytes(4).toString('hex')}`,
-  VERSION: '4.2.0',
+  VERSION: '4.3.0',
 };
 // ========================================
 
@@ -99,6 +100,13 @@ class TG400Agent {
     this.autoReplyConfig = {
       enabled: false,
       message: 'Thank you for your message. We will get back to you shortly.',
+    };
+
+    // Call auto-SMS config cache (fetched from cloud)
+    this.callAutoSmsConfig = {
+      enabled: false,
+      answered_message: 'Thank you for calling us! We appreciate your business and are here to help anytime.',
+      missed_message: 'We missed your call! Sorry we couldn\'t answer. We\'ll get back to you shortly. Your call is important to us.',
     };
     
     // Load persistent state
@@ -192,6 +200,162 @@ class TG400Agent {
     } catch (error) {
       this.log('warn', `Failed to sync auto-reply config: ${error.message}`);
     }
+  }
+
+  // ========== CALL AUTO-SMS CONFIG ==========
+
+  async syncCallAutoSmsConfig() {
+    try {
+      const url = `${this.config.SUPABASE_URL}/rest/v1/call_autosms_config?select=enabled,answered_message,missed_message&limit=1`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'apikey': this.config.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${this.config.SUPABASE_ANON_KEY}`,
+        },
+      });
+
+      if (!response.ok) {
+        this.log('warn', `Failed to fetch call auto-SMS config: HTTP ${response.status}`);
+        return;
+      }
+
+      const rows = await response.json();
+      if (rows && rows.length > 0) {
+        const cfg = rows[0];
+        const wasEnabled = this.callAutoSmsConfig.enabled;
+        this.callAutoSmsConfig = {
+          enabled: cfg.enabled === true,
+          answered_message: cfg.answered_message || this.callAutoSmsConfig.answered_message,
+          missed_message: cfg.missed_message || this.callAutoSmsConfig.missed_message,
+        };
+        if (wasEnabled !== this.callAutoSmsConfig.enabled) {
+          this.log('info', `Call auto-SMS ${this.callAutoSmsConfig.enabled ? 'ENABLED' : 'DISABLED'}`);
+        }
+      }
+    } catch (error) {
+      this.log('warn', `Failed to sync call auto-SMS config: ${error.message}`);
+    }
+  }
+
+  // ========== CALL AUTO-SMS SENDING ==========
+
+  async sendCallAutoSms(callerNumber, callStatus, simPort) {
+    if (!this.callAutoSmsConfig.enabled) return;
+    if (!callerNumber || callerNumber === 'Unknown') return;
+
+    // Determine which message to send based on call status
+    let smsText;
+    let eventType;
+    if (callStatus === 'answered') {
+      smsText = this.callAutoSmsConfig.answered_message;
+      eventType = 'call_autosms_answered';
+    } else if (callStatus === 'missed' || callStatus === 'busy' || callStatus === 'failed') {
+      smsText = this.callAutoSmsConfig.missed_message;
+      eventType = 'call_autosms_missed';
+    } else {
+      return; // Don't send for other statuses (voicemail, internal, etc.)
+    }
+
+    // Only send for inbound calls (client calling us)
+    this.log('info', `Sending call auto-SMS (${callStatus}) to ${callerNumber}`);
+
+    // Use the same SMS sending logic as auto-reply
+    const port = simPort || this.config.TG400_PORTS[0] || 1;
+    const endpoints = [
+      `/api/v1.0/sms/send`,
+      `/cgi-bin/api-send_sms`,
+      `/api/sms/send`,
+    ];
+
+    // Try JSON body
+    for (const endpoint of endpoints) {
+      try {
+        const url = `http://${this.config.TG400_IP}${endpoint}`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${this.authHeader}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            port,
+            to: callerNumber,
+            number: callerNumber,
+            message: smsText,
+            text: smsText,
+            content: smsText,
+          }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeout);
+
+        if (response.ok) {
+          this.log('success', `Call auto-SMS (${callStatus}) sent to ${callerNumber} via port ${port}`);
+          await this.pushToSupabase('activity_logs', {
+            event_type: eventType,
+            message: `Call auto-SMS (${callStatus}) sent to ${callerNumber} on SIM port ${port}`,
+            severity: 'info',
+            sim_port: port,
+            metadata: {
+              source: 'local-agent',
+              agent_id: this.config.AGENT_ID,
+              to: callerNumber,
+              call_status: callStatus,
+              sms_preview: smsText.substring(0, 50),
+            },
+          });
+          return true;
+        }
+      } catch (error) {
+        // Try next endpoint
+      }
+    }
+
+    // Fallback: form-encoded
+    for (const endpoint of endpoints) {
+      try {
+        const url = `http://${this.config.TG400_IP}${endpoint}`;
+        const params = new URLSearchParams({ port: String(port), to: callerNumber, message: smsText });
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${this.authHeader}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: params.toString(),
+        });
+
+        if (response.ok) {
+          this.log('success', `Call auto-SMS (${callStatus}, form-encoded) sent to ${callerNumber} via port ${port}`);
+          await this.pushToSupabase('activity_logs', {
+            event_type: eventType,
+            message: `Call auto-SMS (${callStatus}) sent to ${callerNumber} on SIM port ${port}`,
+            severity: 'info',
+            sim_port: port,
+            metadata: { source: 'local-agent', agent_id: this.config.AGENT_ID, to: callerNumber, call_status: callStatus },
+          });
+          return true;
+        }
+      } catch (error) {
+        // Try next
+      }
+    }
+
+    this.log('warn', `Failed to send call auto-SMS (${callStatus}) to ${callerNumber}`);
+    await this.pushToSupabase('activity_logs', {
+      event_type: 'call_autosms_failed',
+      message: `Call auto-SMS (${callStatus}) failed for ${callerNumber} on SIM port ${port}`,
+      severity: 'warning',
+      sim_port: port,
+      metadata: { source: 'local-agent', agent_id: this.config.AGENT_ID, call_status: callStatus },
+    });
+    return false;
   }
 
   // ========== SMS AUTO-REPLY ==========
@@ -876,6 +1040,11 @@ class TG400Agent {
         }
         
         this.log('success', `CDR synced`, { caller: callData.caller_number, callee: callData.callee_number, status: callData.status });
+
+        // Send call auto-SMS for inbound calls
+        if (callData.direction === 'inbound') {
+          await this.sendCallAutoSms(callData.caller_number, callData.status, callData.sim_port);
+        }
       } else {
         this.messageQueue.push({ table: 'call_records', data: callData, timestamp: Date.now() });
         this.saveQueue();
@@ -1201,6 +1370,7 @@ class TG400Agent {
       if (this.isRunning) {
         await this.syncConfigFromCloud();
         await this.syncAutoReplyConfig();
+        await this.syncCallAutoSmsConfig();
       }
     }, this.config.CONFIG_SYNC_INTERVAL));
 
@@ -1522,6 +1692,7 @@ class TG400Agent {
     // Sync config from cloud first (including auto-reply settings)
     await this.syncConfigFromCloud();
     await this.syncAutoReplyConfig();
+    await this.syncCallAutoSmsConfig();
 
     // Test connections
     const connections = await this.testConnection();
