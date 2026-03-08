@@ -120,10 +120,12 @@ const Index = () => {
 
           {activeTab === "comms" && <CommunicationsPanel />}
 
-          {activeTab === "insights" && (
-            <InsightsPanel
-              simConfigs={simConfigs}
-              simLoading={simLoading}
+          {activeTab === "insights" && <InsightsPanel />}
+
+          {activeTab === "config" && (
+            <ConfigurationPanel
+              simPorts={simConfigs}
+              isLoading={simLoading}
               onConfigSaved={() => queryClient.invalidateQueries({ queryKey: ["sim-ports"] })}
             />
           )}
