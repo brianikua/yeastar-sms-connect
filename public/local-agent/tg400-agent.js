@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * TG400 Local Polling Agent v4.3 - Call Auto-SMS
+ * TG400 Local Polling Agent v4.4 - Service Role Key for Config
  * 
  * Features:
  * - Persistent state file (survives restarts)
