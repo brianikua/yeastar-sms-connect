@@ -16,6 +16,7 @@ import {
   Clock,
   Shield,
 } from "lucide-react";
+import { usePendingSwapCount } from "@/hooks/useShiftSwap";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -70,45 +71,58 @@ const NavItems = ({
   onTabChange: (tab: DashboardTab) => void;
   collapsed: boolean;
   onItemClick?: () => void;
-}) => (
-  <nav className="flex-1 flex flex-col gap-1 px-2">
-    {navItems.map((item) => {
-      const isActive = activeTab === item.id;
-      const button = (
-        <button
-          key={item.id}
-          onClick={() => {
-            onTabChange(item.id);
-            onItemClick?.();
-          }}
-          className={cn(
-            "flex items-center gap-3 w-full rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
-            isActive
-              ? "bg-primary text-primary-foreground shadow-md"
-              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-            collapsed && "justify-center px-0"
-          )}
-        >
-          <item.icon className="w-4 h-4 shrink-0" />
-          {!collapsed && <span className="truncate">{item.label}</span>}
-        </button>
-      );
+}) => {
+  const { data: pendingCount = 0 } = usePendingSwapCount();
 
-      if (collapsed) {
-        return (
-          <Tooltip key={item.id}>
-            <TooltipTrigger asChild>{button}</TooltipTrigger>
-            <TooltipContent side="right" className="bg-popover text-popover-foreground border-border">
-              {item.label}
-            </TooltipContent>
-          </Tooltip>
+  return (
+    <nav className="flex-1 flex flex-col gap-1 px-2">
+      {navItems.map((item) => {
+        const isActive = activeTab === item.id;
+        const badge = item.id === "supervisor" && pendingCount > 0 ? pendingCount : 0;
+        const button = (
+          <button
+            key={item.id}
+            onClick={() => {
+              onTabChange(item.id);
+              onItemClick?.();
+            }}
+            className={cn(
+              "relative flex items-center gap-3 w-full rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
+              isActive
+                ? "bg-primary text-primary-foreground shadow-md"
+                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+              collapsed && "justify-center px-0"
+            )}
+          >
+            <item.icon className="w-4 h-4 shrink-0" />
+            {!collapsed && <span className="truncate">{item.label}</span>}
+            {badge > 0 && (
+              <span className={cn(
+                "flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold min-w-[18px] h-[18px] px-1",
+                collapsed ? "absolute -top-1 -right-1" : "ml-auto"
+              )}>
+                {badge > 99 ? "99+" : badge}
+              </span>
+            )}
+          </button>
         );
-      }
 
-      return button;
-    })}
-  </nav>
-);
+        if (collapsed) {
+          return (
+            <Tooltip key={item.id}>
+              <TooltipTrigger asChild>{button}</TooltipTrigger>
+              <TooltipContent side="right" className="bg-popover text-popover-foreground border-border">
+                {item.label}
+              </TooltipContent>
+            </Tooltip>
+          );
+        }
+
+        return button;
+      })}
+    </nav>
+  );
+};
 
 export const DashboardSidebar = ({ activeTab, onTabChange }: DashboardSidebarProps) => {
   const isMobile = useIsMobile();
