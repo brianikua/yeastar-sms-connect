@@ -2,7 +2,7 @@ import { useState, DragEvent } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useAgents, useWeekSchedule, useCreateSchedule, useDeleteSchedule, Agent, ShiftScheduleEntry } from "@/hooks/useAgents";
+import { useAgents, useWeekSchedule, useCreateSchedule, useDeleteSchedule, timesOverlap, Agent, ShiftScheduleEntry } from "@/hooks/useAgents";
 import { ChevronLeft, ChevronRight, X, GripVertical } from "lucide-react";
 import { format, addDays, startOfWeek, endOfWeek, isSameDay } from "date-fns";
 import { cn } from "@/lib/utils";
