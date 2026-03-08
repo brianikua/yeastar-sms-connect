@@ -100,6 +100,13 @@ class TG400Agent {
       enabled: false,
       message: 'Thank you for your message. We will get back to you shortly.',
     };
+
+    // Call auto-SMS config cache (fetched from cloud)
+    this.callAutoSmsConfig = {
+      enabled: false,
+      answered_message: 'Thank you for calling us! We appreciate your business and are here to help anytime.',
+      missed_message: 'We missed your call! Sorry we couldn\'t answer. We\'ll get back to you shortly. Your call is important to us.',
+    };
     
     // Load persistent state
     this.loadState();
