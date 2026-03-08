@@ -18,6 +18,8 @@ import { ContactsPanel } from "@/components/ContactsPanel";
 import { PredictiveMaintenancePanel } from "@/components/PredictiveMaintenancePanel";
 import { AiAutomationPanel } from "@/components/AiAutomationPanel";
 import { MissedCallsReportPanel } from "@/components/MissedCallsReportPanel";
+import { ClockInKiosk } from "@/components/ClockInKiosk";
+import { SupervisorPanel } from "@/components/SupervisorPanel";
 import { DashboardSidebar, DashboardTab } from "@/components/DashboardSidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Server, Phone, Database } from "lucide-react";
@@ -180,6 +182,10 @@ const Index = () => {
           {activeTab === "contacts" && <ContactsPanel />}
 
           {activeTab === "reports" && <MissedCallsReportPanel />}
+
+          {activeTab === "kiosk" && <ClockInKiosk />}
+
+          {activeTab === "supervisor" && <SupervisorPanel />}
         </main>
       </div>
     </div>

@@ -113,6 +113,41 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_shifts: {
+        Row: {
+          agent_id: string
+          clock_in: string
+          clock_out: string | null
+          created_at: string
+          id: string
+          status: string
+        }
+        Insert: {
+          agent_id: string
+          clock_in?: string
+          clock_out?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+        }
+        Update: {
+          agent_id?: string
+          clock_in?: string
+          clock_out?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_shifts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_updates: {
         Row: {
           created_at: string
@@ -140,6 +175,42 @@ export type Database = {
           release_notes?: string | null
           released_at?: string
           version?: string
+        }
+        Relationships: []
+      }
+      agents: {
+        Row: {
+          created_at: string
+          email: string | null
+          extension: string | null
+          id: string
+          is_active: boolean
+          name: string
+          phone: string | null
+          pin: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          extension?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          phone?: string | null
+          pin: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          extension?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          phone?: string | null
+          pin?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -487,6 +558,47 @@ export type Database = {
           web_port?: number
         }
         Relationships: []
+      }
+      shift_schedule: {
+        Row: {
+          agent_id: string
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          shift_date: string
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          shift_date: string
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          shift_date?: string
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_schedule_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sim_port_config: {
         Row: {
