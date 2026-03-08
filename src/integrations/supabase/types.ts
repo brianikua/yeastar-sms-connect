@@ -625,6 +625,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auto_read_old_sms: { Args: never; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
