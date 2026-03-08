@@ -318,6 +318,39 @@ export const AgentProfilePanel = () => {
                 />
                 <p className="text-xs text-muted-foreground mt-1">Agent will receive shift & performance notifications on Telegram</p>
               </div>
+              <div>
+                <Label className="flex items-center gap-1"><Bell className="w-3 h-3" /> Notification Preference</Label>
+                <RadioGroup
+                  value={form.notification_channel}
+                  onValueChange={(val) => setForm({ ...form, notification_channel: val as "telegram" | "email" | "both" })}
+                  className="flex gap-4 mt-2"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <RadioGroupItem value="telegram" id={`notif-tg-${selectedAgent?.id}`} />
+                    <Label htmlFor={`notif-tg-${selectedAgent?.id}`} className="text-sm font-normal flex items-center gap-1 cursor-pointer">
+                      <Send className="w-3 h-3" /> Telegram
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <RadioGroupItem value="email" id={`notif-email-${selectedAgent?.id}`} />
+                    <Label htmlFor={`notif-email-${selectedAgent?.id}`} className="text-sm font-normal flex items-center gap-1 cursor-pointer">
+                      <Mail className="w-3 h-3" /> Email
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <RadioGroupItem value="both" id={`notif-both-${selectedAgent?.id}`} />
+                    <Label htmlFor={`notif-both-${selectedAgent?.id}`} className="text-sm font-normal flex items-center gap-1 cursor-pointer">
+                      <Bell className="w-3 h-3" /> Both
+                    </Label>
+                  </div>
+                </RadioGroup>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {form.notification_channel === "telegram" && "Notifications via Telegram only (email used as fallback if no chat ID)"}
+                  {form.notification_channel === "email" && "Notifications via email only"}
+                  {form.notification_channel === "both" && "Notifications via both Telegram and email"}
+                </p>
+              </div>
+              </div>
               <Button onClick={handleSave} disabled={updateAgent.isPending} className="w-full">
                 <Save className="w-4 h-4 mr-2" /> Save Changes
               </Button>

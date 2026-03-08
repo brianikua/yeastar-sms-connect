@@ -168,6 +168,7 @@ export const useClockIn = () => {
         extension: agentResult.extension,
         telegram_chat_id: agentResult.telegram_chat_id,
         pin: "", // Not exposed by RPC
+        notification_channel: "telegram",
         is_active: true,
         created_at: "",
       };
