@@ -113,7 +113,9 @@ export const useCreateSwapRequest = () => {
         body: {
           action: "swap_request",
           requester_name: requesterAgent.name,
+          requester_agent_id: requesterAgentId,
           target_name: targetAgent.name,
+          target_agent_id: targetAgentId,
           requester_shift_date: requesterShift.shift_date,
           requester_shift_time: `${requesterShift.start_time}–${requesterShift.end_time}`,
           target_shift_date: targetShift.shift_date,
