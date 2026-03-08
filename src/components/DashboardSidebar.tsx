@@ -12,8 +12,9 @@ import {
   Crown,
 } from "lucide-react";
 import { usePendingSwapCount } from "@/hooks/useShiftSwap";
+import { useCurrentUserRole, type AppRole } from "@/hooks/useRoles";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
