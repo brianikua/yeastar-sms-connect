@@ -6,11 +6,7 @@ import { SystemStatusCard } from "@/components/SystemStatusCard";
 import { SmsInbox } from "@/components/SmsInbox";
 import { ActivityLog } from "@/components/ActivityLog";
 import { ConfigurationPanel } from "@/components/ConfigurationPanel";
-import { CallRecordsTable } from "@/components/CallRecordsTable";
-import { CallStatsCards } from "@/components/CallStatsCards";
-import { QuickDialWidget } from "@/components/QuickDialWidget";
-import { CallQueueStatus } from "@/components/CallQueueStatus";
-import { ContactsPanel } from "@/components/ContactsPanel";
+import { CommunicationsPanel } from "@/components/CommunicationsPanel";
 import { InsightsPanel } from "@/components/InsightsPanel";
 import { ClockInKiosk } from "@/components/ClockInKiosk";
 import { SupervisorPanel } from "@/components/SupervisorPanel";
@@ -22,7 +18,6 @@ import { useSimPorts } from "@/hooks/useSimPorts";
 import { useSmsMessages } from "@/hooks/useSmsMessages";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
-import { useCallRecords, useCallStats } from "@/hooks/useCallRecords";
 
 const Index = () => {
   const queryClient = useQueryClient();
