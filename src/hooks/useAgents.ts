@@ -312,3 +312,47 @@ export const useAgentDailyStats = () => {
     refetchInterval: 30000,
   });
 };
+
+export const useWeekSchedule = (weekStart: string, weekEnd: string) => {
+  return useQuery({
+    queryKey: ["week-schedule", weekStart, weekEnd],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("shift_schedule")
+        .select("*")
+        .gte("shift_date", weekStart)
+        .lte("shift_date", weekEnd)
+        .order("start_time");
+      if (error) throw error;
+
+      const agentIds = [...new Set(data.map((s: any) => s.agent_id))];
+      if (agentIds.length === 0) return [] as ShiftScheduleEntry[];
+
+      const { data: agents } = await supabase
+        .from("agents")
+        .select("*")
+        .in("id", agentIds);
+
+      const agentMap = new Map((agents || []).map((a: any) => [a.id, a]));
+      return data.map((s: any) => ({ ...s, agent: agentMap.get(s.agent_id) })) as ShiftScheduleEntry[];
+    },
+  });
+};
+
+export const useDeleteSchedule = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("shift_schedule").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["shift-schedule"] });
+      queryClient.invalidateQueries({ queryKey: ["week-schedule"] });
+      toast.success("Shift removed");
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Failed to remove shift");
+    },
+  });
+};
