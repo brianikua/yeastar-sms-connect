@@ -174,6 +174,10 @@ export const useClockIn = () => {
           .update({ clock_out: new Date().toISOString(), status: "completed" })
           .eq("id", existing.id);
         if (error) throw error;
+        // Send notification (fire and forget)
+        supabase.functions.invoke("shift-notify", {
+          body: { action: "clock_out", agent_name: agent.name, agent_email: agent.email, clock_time: new Date().toISOString() },
+        });
         return { action: "clock_out" as const, agent };
       } else {
         // Clock in
@@ -181,6 +185,10 @@ export const useClockIn = () => {
           .from("agent_shifts")
           .insert({ agent_id: agent.id, clock_in: new Date().toISOString(), status: "active" });
         if (error) throw error;
+        // Send notification (fire and forget)
+        supabase.functions.invoke("shift-notify", {
+          body: { action: "clock_in", agent_name: agent.name, agent_email: agent.email, clock_time: new Date().toISOString() },
+        });
         return { action: "clock_in" as const, agent };
       }
     },
