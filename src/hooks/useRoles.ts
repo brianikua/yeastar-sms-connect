@@ -103,3 +103,33 @@ export const useUpdateUserRole = () => {
     },
   });
 };
+
+export interface CreateUserInput {
+  email: string;
+  password: string;
+  role: AppRole;
+  full_name: string;
+}
+
+export const useCreateUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CreateUserInput) => {
+      const { data, error } = await supabase.functions.invoke("create-user", {
+        body: input,
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });
+      toast.success(`User ${variables.email} created successfully. Initial PIN: ${variables.password}`, {
+        duration: 10000,
+      });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Failed to create user");
+    },
+  });
+};

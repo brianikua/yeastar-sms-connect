@@ -3,8 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shield, ShieldCheck, UserCog, Eye, Crown } from "lucide-react";
-import { useUsersWithRoles, useCurrentUserRole, useUpdateUserRole, ROLE_META, type AppRole } from "@/hooks/useRoles";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Shield, ShieldCheck, UserCog, Eye, Crown, UserPlus, Loader2, KeyRound } from "lucide-react";
+import { useUsersWithRoles, useCurrentUserRole, useUpdateUserRole, useCreateUser, ROLE_META, type AppRole } from "@/hooks/useRoles";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -17,12 +21,42 @@ const ROLE_ICONS: Record<AppRole, React.ElementType> = {
 
 const ROLE_ORDER: AppRole[] = ["super_admin", "admin", "operator", "viewer"];
 
+const generatePin = () => {
+  return String(Math.floor(100000 + Math.random() * 900000));
+};
+
 export const RoleManagementPanel = () => {
   const { data: users, isLoading } = useUsersWithRoles();
   const { data: currentRole } = useCurrentUserRole();
   const updateRole = useUpdateUserRole();
+  const createUser = useCreateUser();
 
   const isSuperAdmin = currentRole === "super_admin";
+
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [role, setRole] = useState<AppRole>("operator");
+  const [pin, setPin] = useState(generatePin());
+
+  const resetForm = () => {
+    setEmail("");
+    setFullName("");
+    setRole("operator");
+    setPin(generatePin());
+  };
+
+  const handleCreate = async () => {
+    if (!email || !pin) return;
+    await createUser.mutateAsync({
+      email,
+      password: pin,
+      role,
+      full_name: fullName,
+    });
+    setOpen(false);
+    resetForm();
+  };
 
   return (
     <div className="space-y-6">
@@ -51,15 +85,111 @@ export const RoleManagementPanel = () => {
       {/* Users Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Shield className="w-4 h-4" />
-            User Roles
-          </CardTitle>
-          <CardDescription>
-            {isSuperAdmin
-              ? "As Super Admin, you can assign roles to all users"
-              : "Only Super Admins can modify user roles"}
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                User Roles
+              </CardTitle>
+              <CardDescription>
+                {isSuperAdmin
+                  ? "As Super Admin, you can assign roles and add users"
+                  : "Only Super Admins can modify user roles"}
+              </CardDescription>
+            </div>
+            {isSuperAdmin && (
+              <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="gap-2">
+                    <UserPlus className="w-4 h-4" />
+                    Add User
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New User</DialogTitle>
+                    <DialogDescription>
+                      Add a new user with an initial sign-in PIN. They can change it from their profile.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="user-name">Full Name</Label>
+                      <Input
+                        id="user-name"
+                        placeholder="e.g. John Doe"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="user-email">Email Address</Label>
+                      <Input
+                        id="user-email"
+                        type="email"
+                        placeholder="user@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="user-pin">Initial Sign-in PIN</Label>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id="user-pin"
+                            className="pl-9 font-mono text-lg tracking-widest"
+                            value={pin}
+                            onChange={(e) => setPin(e.target.value)}
+                            maxLength={20}
+                            required
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setPin(generatePin())}
+                        >
+                          Regenerate
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        This PIN will be shown once. The user will use it as their password to sign in and can change it later.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Role</Label>
+                      <Select value={role} onValueChange={(v) => setRole(v as AppRole)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ROLE_ORDER.filter((r) => r !== "super_admin").map((r) => (
+                            <SelectItem key={r} value={r}>
+                              <span className="flex items-center gap-2">
+                                {ROLE_META.labels[r]}
+                                <span className="text-xs text-muted-foreground">— {ROLE_META.descriptions[r]}</span>
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+                    <Button onClick={handleCreate} disabled={!email || !pin || createUser.isPending}>
+                      {createUser.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      Create User
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -154,9 +284,6 @@ export const RoleManagementPanel = () => {
                     <div className="font-medium text-sm">{ROLE_META.labels[role]}</div>
                     <div className="text-xs text-muted-foreground">{ROLE_META.descriptions[role]}</div>
                   </div>
-                  {i < ROLE_ORDER.length - 1 && (
-                    <div className="absolute left-[15px] mt-8 w-px h-4 bg-border" />
-                  )}
                 </div>
               );
             })}
