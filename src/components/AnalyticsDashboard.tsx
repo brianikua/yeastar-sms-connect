@@ -273,8 +273,10 @@ export const AnalyticsDashboard = () => {
                   <TableHead className="text-center">Calls</TableHead>
                   <TableHead className="text-center">Answered</TableHead>
                   <TableHead className="text-center">Missed</TableHead>
-                  <TableHead className="text-center">Called Back</TableHead>
-                  <TableHead className="text-center">SMS</TableHead>
+                   <TableHead className="text-center">Called Back</TableHead>
+                   <TableHead className="text-center">SMS</TableHead>
+                   <TableHead className="text-center">Total Talk</TableHead>
+                   <TableHead className="text-center">Avg Talk</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
