@@ -8,8 +8,7 @@ import { ActivityLog } from "@/components/ActivityLog";
 import { ConfigurationPanel } from "@/components/ConfigurationPanel";
 import { CommunicationsPanel } from "@/components/CommunicationsPanel";
 import { InsightsPanel } from "@/components/InsightsPanel";
-import { ClockInKiosk } from "@/components/ClockInKiosk";
-import { SupervisorPanel } from "@/components/SupervisorPanel";
+import { StaffPanel } from "@/components/StaffPanel";
 import { DashboardSidebar, DashboardTab } from "@/components/DashboardSidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Server, Phone, Database } from "lucide-react";
@@ -132,9 +131,7 @@ const Index = () => {
             />
           )}
 
-          {activeTab === "kiosk" && <ClockInKiosk />}
-
-          {activeTab === "supervisor" && <SupervisorPanel />}
+          {activeTab === "staff" && <StaffPanel />}
         </main>
       </div>
     </div>
