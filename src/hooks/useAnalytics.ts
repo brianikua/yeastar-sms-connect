@@ -173,6 +173,7 @@ export const useAnalytics = (days: number = 7) => {
         averagePerDay,
         busiestPort,
         peakHour,
+        extensionBreakdown,
       };
     },
     refetchInterval: 60000, // Refetch every minute
