@@ -93,7 +93,7 @@ export const Header = ({ systemStatus, lastSync, onRefresh }: HeaderProps) => {
               <StatusIndicator status={systemStatus} label="System" />
               <div className="h-4 w-px bg-border" />
               <span className="text-muted-foreground">
-                Last sync: <span className="font-mono text-foreground">{lastSync}</span>
+                Synced: <span className="font-mono text-foreground">{formatAgo(secondsAgo)}</span>
               </span>
             </div>
             <Button
