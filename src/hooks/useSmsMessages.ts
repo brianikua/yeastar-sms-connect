@@ -66,7 +66,7 @@ export const useSmsMessages = (limit = 50) => {
         categoryConfidence: msg.category_confidence ?? undefined,
       }));
     },
-    refetchInterval: 30000, // Fallback polling every 30 seconds
+    refetchInterval: 5000, // Poll every 5 seconds
   });
 };
 

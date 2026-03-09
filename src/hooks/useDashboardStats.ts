@@ -50,6 +50,6 @@ export const useDashboardStats = () => {
         unreadMessages: unreadMessages || 0,
       };
     },
-    refetchInterval: 30000,
+    refetchInterval: 5000,
   });
 };

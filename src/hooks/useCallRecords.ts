@@ -40,7 +40,7 @@ export const useCallRecords = () => {
       if (error) throw error;
       return data as CallRecord[];
     },
-    refetchInterval: 30000,
+    refetchInterval: 5000,
   });
 
   const queryClient = useQueryClient();
@@ -102,6 +102,6 @@ export const useCallStats = () => {
 
       return stats;
     },
-    refetchInterval: 30000,
+    refetchInterval: 5000,
   });
 };
