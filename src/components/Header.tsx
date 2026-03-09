@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Radio, RefreshCw, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusIndicator } from "./StatusIndicator";
