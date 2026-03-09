@@ -129,12 +129,12 @@ export const Header = ({ systemStatus, lastSync, onRefresh }: HeaderProps) => {
             </div>
             <Button
               variant="outline"
-              size="sm"
+              size="icon"
               onClick={onRefresh}
-              className="gap-2 border-border/50 hover:bg-muted/50"
+              className="h-8 w-8 md:h-9 md:w-auto md:px-3 md:gap-2 border-border/50 hover:bg-muted/50"
             >
               <RefreshCw className="w-4 h-4" />
-              Refresh
+              <span className="hidden md:inline">Refresh</span>
             </Button>
             
             <DropdownMenu>

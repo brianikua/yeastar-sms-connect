@@ -143,7 +143,7 @@ export const DashboardSidebar = ({ activeTab, onTabChange }: DashboardSidebarPro
           <Button
             variant="outline"
             size="icon"
-            className="fixed bottom-4 left-4 z-50 h-12 w-12 rounded-full shadow-lg border-border/50 bg-card"
+            className="fixed bottom-4 left-4 z-40 h-11 w-11 rounded-full shadow-lg border-border/50 bg-card"
           >
             <Menu className="w-5 h-5" />
           </Button>
