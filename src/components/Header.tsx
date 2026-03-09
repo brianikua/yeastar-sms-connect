@@ -69,17 +69,17 @@ export const Header = ({ systemStatus, lastSync, onRefresh }: HeaderProps) => {
   return (
     <>
       <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-                <Radio className="w-5 h-5 text-primary" />
+        <div className="container flex h-14 md:h-16 items-center justify-between gap-2 px-3 md:px-6">
+          <div className="flex items-center gap-2 md:gap-4 min-w-0">
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
+              <div className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-lg bg-primary/10 shrink-0">
+                <Radio className="w-4 h-4 md:w-5 md:h-5 text-primary" />
               </div>
-              <div>
-                <h1 className="text-lg font-semibold tracking-tight">
+              <div className="min-w-0">
+                <h1 className="text-sm md:text-lg font-semibold tracking-tight truncate">
                   SMS Gateway Manager
                 </h1>
-                <p className="text-xs text-muted-foreground font-mono">
+                <p className="text-[10px] md:text-xs text-muted-foreground font-mono hidden sm:block">
                   Yeastar TG400 + S100
                 </p>
               </div>
