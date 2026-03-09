@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Header } from "@/components/Header";
 import { SimPortCard } from "@/components/SimPortCard";
 import { SystemStatusCard } from "@/components/SystemStatusCard";
