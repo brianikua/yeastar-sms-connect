@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Radio, RefreshCw, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusIndicator } from "./StatusIndicator";
@@ -31,6 +31,28 @@ interface HeaderProps {
 export const Header = ({ systemStatus, lastSync, onRefresh }: HeaderProps) => {
   const { user, role, isAdmin } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [secondsAgo, setSecondsAgo] = useState(0);
+  const [lastRefreshTime, setLastRefreshTime] = useState(Date.now());
+
+  // Reset timer when lastSync changes (indicates new data)
+  useEffect(() => {
+    setLastRefreshTime(Date.now());
+    setSecondsAgo(0);
+  }, [lastSync]);
+
+  // Tick every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSecondsAgo(Math.floor((Date.now() - lastRefreshTime) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lastRefreshTime]);
+
+  const formatAgo = useCallback((s: number) => {
+    if (s < 5) return "just now";
+    if (s < 60) return `${s}s ago`;
+    return `${Math.floor(s / 60)}m ${s % 60}s ago`;
+  }, []);
 
   const handleSignOut = async () => {
     await signOut();
@@ -71,7 +93,7 @@ export const Header = ({ systemStatus, lastSync, onRefresh }: HeaderProps) => {
               <StatusIndicator status={systemStatus} label="System" />
               <div className="h-4 w-px bg-border" />
               <span className="text-muted-foreground">
-                Last sync: <span className="font-mono text-foreground">{lastSync}</span>
+                Synced: <span className="font-mono text-foreground">{formatAgo(secondsAgo)}</span>
               </span>
             </div>
             <Button
