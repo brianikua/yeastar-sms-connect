@@ -102,6 +102,6 @@ export const useCallStats = () => {
 
       return stats;
     },
-    refetchInterval: 30000,
+    refetchInterval: 5000,
   });
 };
