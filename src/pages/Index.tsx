@@ -56,79 +56,103 @@ const Index = () => {
           {activeTab === "dashboard" && (
             <>
               {/* System Status Row */}
-              <div className="grid gap-4 md:grid-cols-3">
-                <SystemStatusCard
-                  title="TG400 Gateway"
-                  status={systemStatus}
-                  statusLabel={systemStatus === "online" ? "Connected" : systemStatus === "warning" ? "Degraded" : "Disconnected"}
-                  icon={Server}
-                  details={[
-                    { label: "Active SIMs", value: statsLoading ? "..." : `${stats?.activeSims || 0}/${stats?.totalSims || 0}` },
-                    { label: "Last Poll", value: lastSync.split(" ")[1] || lastSync },
-                  ]}
-                />
-                <SystemStatusCard
-                  title="S100 PBX"
-                  status="online"
-                  statusLabel="Connected"
-                  icon={Phone}
-                  details={[
-                    { label: "Extensions", value: "Configured" },
-                    { label: "SMS Queue", value: statsLoading ? "..." : `${stats?.unreadMessages || 0} pending` },
-                  ]}
-                />
-                <SystemStatusCard
-                  title="Message Store"
-                  status="online"
-                  statusLabel="Healthy"
-                  icon={Database}
-                  details={[
-                    { label: "Total Messages", value: statsLoading ? "..." : stats?.totalMessages.toLocaleString() || "0" },
-                    { label: "Unread", value: statsLoading ? "..." : stats?.unreadMessages.toLocaleString() || "0" },
-                  ]}
-                />
-              </div>
+              <ErrorBoundary fallbackTitle="System Status">
+                <div className="grid gap-4 md:grid-cols-3">
+                  <SystemStatusCard
+                    title="TG400 Gateway"
+                    status={systemStatus}
+                    statusLabel={systemStatus === "online" ? "Connected" : systemStatus === "warning" ? "Degraded" : "Disconnected"}
+                    icon={Server}
+                    details={[
+                      { label: "Active SIMs", value: statsLoading ? "..." : `${stats?.activeSims || 0}/${stats?.totalSims || 0}` },
+                      { label: "Last Poll", value: lastSync.split(" ")[1] || lastSync },
+                    ]}
+                  />
+                  <SystemStatusCard
+                    title="S100 PBX"
+                    status="online"
+                    statusLabel="Connected"
+                    icon={Phone}
+                    details={[
+                      { label: "Extensions", value: "Configured" },
+                      { label: "SMS Queue", value: statsLoading ? "..." : `${stats?.unreadMessages || 0} pending` },
+                    ]}
+                  />
+                  <SystemStatusCard
+                    title="Message Store"
+                    status="online"
+                    statusLabel="Healthy"
+                    icon={Database}
+                    details={[
+                      { label: "Total Messages", value: statsLoading ? "..." : stats?.totalMessages.toLocaleString() || "0" },
+                      { label: "Unread", value: statsLoading ? "..." : stats?.unreadMessages.toLocaleString() || "0" },
+                    ]}
+                  />
+                </div>
+              </ErrorBoundary>
 
               {/* SIM Ports Row */}
-              <div>
-                <h2 className="text-sm font-medium text-muted-foreground mb-4">SIM Port Status</h2>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  {simLoading ? (
-                    Array.from({ length: 4 }).map((_, i) => (
-                      <Skeleton key={i} className="h-[180px] rounded-lg" />
-                    ))
-                  ) : (
-                    simPorts.map((sim) => <SimPortCard key={sim.port} {...sim} />)
-                  )}
+              <ErrorBoundary fallbackTitle="SIM Ports">
+                <div>
+                  <h2 className="text-sm font-medium text-muted-foreground mb-4">SIM Port Status</h2>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {simLoading ? (
+                      Array.from({ length: 4 }).map((_, i) => (
+                        <Skeleton key={i} className="h-[180px] rounded-lg" />
+                      ))
+                    ) : (
+                      simPorts.map((sim) => <SimPortCard key={sim.port} {...sim} />)
+                    )}
+                  </div>
                 </div>
-              </div>
+              </ErrorBoundary>
 
               {/* Messages Row */}
-              <div>
-                {messagesLoading ? (
-                  <Skeleton className="h-[400px] rounded-lg" />
-                ) : (
-                  <SmsInbox messages={messages} />
-                )}
-              </div>
+              <ErrorBoundary fallbackTitle="SMS Inbox">
+                <div>
+                  {messagesLoading ? (
+                    <Skeleton className="h-[400px] rounded-lg" />
+                  ) : (
+                    <SmsInbox messages={messages} />
+                  )}
+                </div>
+              </ErrorBoundary>
             </>
           )}
 
-          {activeTab === "comms" && <CommunicationsPanel />}
-
-          {activeTab === "insights" && <InsightsPanel />}
-
-          {activeTab === "config" && (
-            <ConfigurationPanel
-              simPorts={simConfigs}
-              isLoading={simLoading}
-              onConfigSaved={() => queryClient.invalidateQueries({ queryKey: ["sim-ports"] })}
-            />
+          {activeTab === "comms" && (
+            <ErrorBoundary fallbackTitle="Calls & Contacts">
+              <CommunicationsPanel />
+            </ErrorBoundary>
           )}
 
-          {activeTab === "staff" && <StaffPanel />}
+          {activeTab === "insights" && (
+            <ErrorBoundary fallbackTitle="Insights">
+              <InsightsPanel />
+            </ErrorBoundary>
+          )}
 
-          {activeTab === "roles" && <RoleManagementPanel />}
+          {activeTab === "config" && (
+            <ErrorBoundary fallbackTitle="Configuration">
+              <ConfigurationPanel
+                simPorts={simConfigs}
+                isLoading={simLoading}
+                onConfigSaved={() => queryClient.invalidateQueries({ queryKey: ["sim-ports"] })}
+              />
+            </ErrorBoundary>
+          )}
+
+          {activeTab === "staff" && (
+            <ErrorBoundary fallbackTitle="Staff">
+              <StaffPanel />
+            </ErrorBoundary>
+          )}
+
+          {activeTab === "roles" && (
+            <ErrorBoundary fallbackTitle="Roles">
+              <RoleManagementPanel />
+            </ErrorBoundary>
+          )}
         </main>
       </div>
     </div>
