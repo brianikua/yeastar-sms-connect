@@ -116,14 +116,14 @@ export const SmsInbox = ({ messages }: SmsInboxProps) => {
   return (
     <Card className="card-glow border-border/50 bg-card h-full">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-              <MessageSquare className="w-5 h-5 text-primary" />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-lg bg-primary/10 shrink-0">
+              <MessageSquare className="w-4 h-4 md:w-5 md:h-5 text-primary" />
             </div>
-            <CardTitle className="text-base font-semibold">SMS Inbox</CardTitle>
+            <CardTitle className="text-sm md:text-base font-semibold">SMS Inbox</CardTitle>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Select
               value={filters.simPort}
               onValueChange={(value) => setFilters({ ...filters, simPort: value })}

@@ -51,7 +51,7 @@ const Index = () => {
       <div className="flex flex-1 overflow-hidden">
         <DashboardSidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">
+        <main className="flex-1 overflow-y-auto p-3 md:p-6 pb-20 md:pb-6 space-y-4 md:space-y-6">
           {activeTab === "dashboard" && (
             <>
               {/* System Status Row */}
