@@ -69,25 +69,25 @@ export const Header = ({ systemStatus, lastSync, onRefresh }: HeaderProps) => {
   return (
     <>
       <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-                <Radio className="w-5 h-5 text-primary" />
+        <div className="container flex h-14 md:h-16 items-center justify-between gap-2 px-3 md:px-6">
+          <div className="flex items-center gap-2 md:gap-4 min-w-0">
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
+              <div className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-lg bg-primary/10 shrink-0">
+                <Radio className="w-4 h-4 md:w-5 md:h-5 text-primary" />
               </div>
-              <div>
-                <h1 className="text-lg font-semibold tracking-tight">
+              <div className="min-w-0">
+                <h1 className="text-sm md:text-lg font-semibold tracking-tight truncate">
                   SMS Gateway Manager
                 </h1>
-                <p className="text-xs text-muted-foreground font-mono">
+                <p className="text-[10px] md:text-xs text-muted-foreground font-mono hidden sm:block">
                   Yeastar TG400 + S100
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-2 md:gap-6 shrink-0">
+            <div className="hidden md:flex items-center gap-4 text-sm">
               <AgentStatusIndicator />
               <div className="h-4 w-px bg-border" />
               <StatusIndicator status={systemStatus} label="System" />
@@ -111,14 +111,30 @@ export const Header = ({ systemStatus, lastSync, onRefresh }: HeaderProps) => {
                 Synced: <span className="font-mono text-foreground">{formatAgo(secondsAgo)}</span>
               </span>
             </div>
+            {/* Mobile: compact status dot only */}
+            <div className="flex md:hidden items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="relative flex h-2 w-2">
+                {systemStatus === "online" ? (
+                  <>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                  </>
+                ) : systemStatus === "warning" ? (
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
+                ) : (
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                )}
+              </span>
+              <span className="font-mono">{formatAgo(secondsAgo)}</span>
+            </div>
             <Button
               variant="outline"
-              size="sm"
+              size="icon"
               onClick={onRefresh}
-              className="gap-2 border-border/50 hover:bg-muted/50"
+              className="h-8 w-8 md:h-9 md:w-auto md:px-3 md:gap-2 border-border/50 hover:bg-muted/50"
             >
               <RefreshCw className="w-4 h-4" />
-              Refresh
+              <span className="hidden md:inline">Refresh</span>
             </Button>
             
             <DropdownMenu>
